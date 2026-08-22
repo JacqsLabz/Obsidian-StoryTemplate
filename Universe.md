@@ -1,10 +1,8 @@
 ---
 canvas:
-  - "[[Sarila.canvas]]"
   - "[[Universe.canvas]]"
-Sarila: []
 Universe: []
 ---
 
-[Middle Ages](MiddleAges.md) (Pre-Chaos)
+Info about your story world. Or links to parts of it. Or whatever. 
 
