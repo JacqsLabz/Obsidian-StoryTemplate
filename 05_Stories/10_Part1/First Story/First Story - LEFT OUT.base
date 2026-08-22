@@ -1,0 +1,26 @@
+filters:
+  and:
+    - canvas.isEmpty()
+    - file.inFolder(this.file.folder) && file.path != this.file.path
+    - '!file.ext.containsAny("base", "canvas")'
+properties:
+  note.Order:
+    displayName: Sort
+views:
+  - type: table
+    name: Table
+    order:
+      - Order
+      - file.name
+      - file.folder
+    sort:
+      - property: Order
+        direction: ASC
+      - property: file.folder
+        direction: ASC
+      - property: file.ext
+        direction: ASC
+    columnSize:
+      note.Order: 73
+      file.name: 321
+      file.folder: 505
