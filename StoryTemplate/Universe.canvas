@@ -1,8 +1,0 @@
-{
-	"nodes":[
-		{"id":"066a3d2c4d53595d","type":"file","file":"Universe.base","x":-22,"y":-898,"width":400,"height":400},
-		{"id":"853edc70d2a3d492","type":"file","file":"Universe.md","x":-520,"y":-898,"width":400,"height":400},
-		{"id":"2442f0fc468cedff","type":"file","file":"05_Stories/10_Part1/Part1.canvas","x":-280,"y":-1620,"width":400,"height":400}
-	],
-	"edges":[]
-}

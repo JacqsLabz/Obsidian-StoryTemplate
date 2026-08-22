@@ -1,1 +1,0 @@
-At first he doesn’t have any, but then he gets stabbed in the shoulder 
