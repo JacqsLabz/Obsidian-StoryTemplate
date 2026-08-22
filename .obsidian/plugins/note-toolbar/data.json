@@ -1,0 +1,528 @@
+{
+  "debugEnabled": false,
+  "defaultToolbar": "afa8bbef-6429-418c-90c7-f96f7d217015",
+  "editorMenuAsToolbar": false,
+  "editorMenuToolbar": null,
+  "emptyViewToolbar": null,
+  "export": {
+    "includeIcons": true,
+    "replaceVars": true,
+    "useDataEls": true,
+    "useIds": true
+  },
+  "folderMappings": [],
+  "icon": "circle-ellipsis",
+  "keepPropsState": false,
+  "lockCallouts": false,
+  "obsidianUiVisibility": {},
+  "onboarding": {
+    "startup-help-view": true,
+    "startup-help-welcome": true,
+    "default-502ef069-fa4b-44a0-8ff3-187a8348804e": true
+  },
+  "ribbonAction": "toolbar",
+  "ribbonToolbar": null,
+  "rules": [],
+  "scriptingEnabled": true,
+  "showEditInFabMenu": true,
+  "showLaunchpad": false,
+  "showToolbarIn": {
+    "audio": false,
+    "bases": false,
+    "canvas": false,
+    "image": false,
+    "kanban": false,
+    "pdf": false,
+    "video": false
+  },
+  "showToolbarInFileMenu": false,
+  "showToolbarInOther": "",
+  "textToolbar": null,
+  "textToolbarOnKeyboard": true,
+  "toolbarProp": "notetoolbar",
+  "toolbars": [
+    {
+      "uuid": "502ef069-fa4b-44a0-8ff3-187a8348804e",
+      "commandPosition": "float",
+      "customClasses": "",
+      "defaultItem": null,
+      "defaultStyles": [
+        "border",
+        "even",
+        "sticky"
+      ],
+      "hasCommand": false,
+      "items": [
+        {
+          "uuid": "f8e0768e-a7e1-4c77-8291-a529059cd1b0",
+          "icon": "lucide-palette",
+          "label": "Cards",
+          "tooltip": "Fix/update all canvas colors based on tags",
+          "hasCommand": false,
+          "inGallery": false,
+          "link": "QuickAdd: Update Canvas Colors",
+          "linkAttr": {
+            "commandCheck": false,
+            "commandId": "quickadd:choice:9108d627-9d94-4eb3-a448-677b770435a9",
+            "hasVars": false,
+            "type": "command"
+          },
+          "visibility": {
+            "desktop": {
+              "components": [
+                "icon",
+                "label"
+              ]
+            },
+            "mobile": {
+              "components": [
+                "icon",
+                "label"
+              ]
+            },
+            "tablet": {
+              "components": [
+                "icon",
+                "label"
+              ]
+            },
+            "viewMode": "all"
+          },
+          "scriptConfig": {
+            "pluginFunction": "exec",
+            "sourceFile": "00_Utility/Templates/canvasColorUpdater.js"
+          }
+        },
+        {
+          "uuid": "6c63c2f7-78a5-449f-9a2b-2d2d3b3790de",
+          "icon": "lucide-table-properties",
+          "label": "Prop.",
+          "tooltip": "Insert scene properies",
+          "hasCommand": false,
+          "inGallery": false,
+          "link": "Templater: Insert /Templates/Add Metadata",
+          "linkAttr": {
+            "commandCheck": false,
+            "commandId": "templater-obsidian:00_Utility/Templates/Add Metadata.md",
+            "hasVars": false,
+            "type": "command"
+          },
+          "visibility": {
+            "desktop": {
+              "components": [
+                "icon",
+                "label"
+              ]
+            },
+            "mobile": {
+              "components": [
+                "icon",
+                "label"
+              ]
+            },
+            "tablet": {
+              "components": [
+                "icon",
+                "label"
+              ]
+            },
+            "viewMode": "all"
+          }
+        },
+        {
+          "uuid": "cf8a51e8-588b-4afe-a277-a6a3b145fc0c",
+          "icon": "lucide-scissors-line-dashed",
+          "label": "Split",
+          "tooltip": "Split here",
+          "hasCommand": false,
+          "inGallery": false,
+          "link": "Templater: Insert SplitHere",
+          "linkAttr": {
+            "commandCheck": false,
+            "commandId": "templater-obsidian:00_Utility/Templates/SplitHere.md",
+            "hasVars": false,
+            "type": "command"
+          },
+          "visibility": {
+            "desktop": {
+              "components": [
+                "icon",
+                "label"
+              ]
+            },
+            "mobile": {
+              "components": [
+                "icon",
+                "label"
+              ]
+            },
+            "tablet": {
+              "components": [
+                "icon",
+                "label"
+              ]
+            },
+            "viewMode": "all"
+          }
+        },
+        {
+          "uuid": "ed92aed1-a8c0-43c4-898f-5bf616d83c9c",
+          "icon": "",
+          "label": "",
+          "tooltip": "",
+          "hasCommand": false,
+          "inGallery": false,
+          "link": "",
+          "linkAttr": {
+            "commandCheck": false,
+            "commandId": "",
+            "hasVars": false,
+            "type": "separator"
+          },
+          "visibility": {
+            "desktop": {
+              "components": [
+                "icon",
+                "label"
+              ]
+            },
+            "mobile": {
+              "components": [
+                "icon",
+                "label"
+              ]
+            },
+            "tablet": {
+              "components": [
+                "icon",
+                "label"
+              ]
+            },
+            "viewMode": "all"
+          }
+        },
+        {
+          "uuid": "b456db1a-c5f8-450c-9885-c0ed557f257f",
+          "icon": "",
+          "label": "",
+          "tooltip": "",
+          "hasCommand": false,
+          "inGallery": false,
+          "link": "",
+          "linkAttr": {
+            "commandCheck": false,
+            "commandId": "",
+            "hasVars": false,
+            "type": "spreader"
+          },
+          "visibility": {
+            "desktop": {
+              "components": [
+                "icon",
+                "label"
+              ]
+            },
+            "mobile": {
+              "components": [
+                "icon",
+                "label"
+              ]
+            },
+            "tablet": {
+              "components": [
+                "icon",
+                "label"
+              ]
+            },
+            "viewMode": "all"
+          }
+        },
+        {
+          "uuid": "e6dc41ba-8598-452d-a257-94d752160102",
+          "icon": "lucide-arrow-big-left",
+          "label": "Prev",
+          "tooltip": "Previous Note",
+          "hasCommand": false,
+          "inGallery": false,
+          "link": "",
+          "linkAttr": {
+            "commandCheck": false,
+            "commandId": "",
+            "hasVars": false,
+            "type": "templater-obsidian"
+          },
+          "visibility": {
+            "desktop": {
+              "components": [
+                "icon",
+                "label"
+              ]
+            },
+            "mobile": {
+              "components": [
+                "icon",
+                "label"
+              ]
+            },
+            "tablet": {
+              "components": [
+                "icon",
+                "label"
+              ]
+            },
+            "viewMode": "all"
+          },
+          "scriptConfig": {
+            "pluginFunction": "appendTemplate",
+            "sourceFile": "00_Utility/Templates/NotePrevious.md"
+          }
+        },
+        {
+          "uuid": "fb699869-ebf8-49a9-9267-4504358be0a0",
+          "icon": "lucide-arrow-big-right",
+          "label": "Next",
+          "tooltip": "Next Note",
+          "hasCommand": false,
+          "inGallery": false,
+          "link": "",
+          "linkAttr": {
+            "commandCheck": false,
+            "commandId": "",
+            "hasVars": false,
+            "type": "templater-obsidian"
+          },
+          "visibility": {
+            "desktop": {
+              "components": [
+                "icon",
+                "label"
+              ]
+            },
+            "mobile": {
+              "components": [
+                "icon",
+                "label"
+              ]
+            },
+            "tablet": {
+              "components": [
+                "icon",
+                "label"
+              ]
+            },
+            "viewMode": "all"
+          },
+          "scriptConfig": {
+            "pluginFunction": "appendTemplate",
+            "sourceFile": "00_Utility/Templates/NoteNext.md"
+          }
+        }
+      ],
+      "mobileStyles": [],
+      "name": "draft",
+      "position": {
+        "desktop": {
+          "allViews": {
+            "position": "top"
+          }
+        },
+        "mobile": {
+          "allViews": {
+            "position": "bottom"
+          }
+        },
+        "tablet": {
+          "allViews": {
+            "position": "bottom"
+          }
+        }
+      },
+      "updated": "2026-03-05T02:37:11.897Z"
+    },
+    {
+      "uuid": "afa8bbef-6429-418c-90c7-f96f7d217015",
+      "commandPosition": "float",
+      "customClasses": "",
+      "defaultItem": null,
+      "defaultStyles": [
+        "border",
+        "even",
+        "sticky"
+      ],
+      "hasCommand": false,
+      "items": [
+        {
+          "uuid": "8a7f73eb-fe20-4299-aa5b-c6f6ecf46024",
+          "icon": "lucide-table-properties",
+          "label": "Make Scene",
+          "tooltip": "Insert scene properies",
+          "hasCommand": false,
+          "inGallery": false,
+          "link": "Templater: Insert /Templates/Add Metadata",
+          "linkAttr": {
+            "commandCheck": false,
+            "commandId": "templater-obsidian:00_Utility/Templates/Add Metadata.md",
+            "hasVars": false,
+            "type": "command"
+          },
+          "visibility": {
+            "desktop": {
+              "components": [
+                "icon",
+                "label"
+              ]
+            },
+            "mobile": {
+              "components": [
+                "icon",
+                "label"
+              ]
+            },
+            "tablet": {
+              "components": [
+                "icon",
+                "label"
+              ]
+            },
+            "viewMode": "all"
+          }
+        },
+        {
+          "uuid": "bb5bd56c-c683-4d07-877a-567074cb62d0",
+          "icon": "lucide-scissors-line-dashed",
+          "label": "Split",
+          "tooltip": "Make this note into 2",
+          "hasCommand": false,
+          "inGallery": false,
+          "link": "Templater: Insert SplitHere",
+          "linkAttr": {
+            "commandCheck": false,
+            "commandId": "templater-obsidian:00_Utility/Templates/SplitHere.md",
+            "hasVars": false,
+            "type": "command"
+          },
+          "visibility": {
+            "desktop": {
+              "components": [
+                "icon",
+                "label"
+              ]
+            },
+            "mobile": {
+              "components": [
+                "icon",
+                "label"
+              ]
+            },
+            "tablet": {
+              "components": [
+                "icon",
+                "label"
+              ]
+            },
+            "viewMode": "all"
+          }
+        },
+        {
+          "uuid": "14d592f3-65f4-418d-95f1-ac8124ab57de",
+          "icon": "",
+          "label": "",
+          "tooltip": "",
+          "hasCommand": false,
+          "inGallery": false,
+          "link": "",
+          "linkAttr": {
+            "commandCheck": false,
+            "commandId": "",
+            "hasVars": false,
+            "type": "spreader"
+          },
+          "visibility": {
+            "desktop": {
+              "components": [
+                "icon",
+                "label"
+              ]
+            },
+            "mobile": {
+              "components": [
+                "icon",
+                "label"
+              ]
+            },
+            "tablet": {
+              "components": [
+                "icon",
+                "label"
+              ]
+            },
+            "viewMode": "all"
+          }
+        },
+        {
+          "uuid": "f5788e31-3dbd-4384-9d2a-51843de3b1f2",
+          "icon": "lucide-palette",
+          "label": "Canvas Colors",
+          "tooltip": "Fix/update all canvas colors based on tags",
+          "hasCommand": false,
+          "inGallery": false,
+          "link": "",
+          "linkAttr": {
+            "commandCheck": false,
+            "commandId": "quickadd:choice:9108d627-9d94-4eb3-a448-677b770435a9",
+            "hasVars": false,
+            "type": "command"
+          },
+          "visibility": {
+            "desktop": {
+              "components": [
+                "icon",
+                "label"
+              ]
+            },
+            "mobile": {
+              "components": [
+                "icon",
+                "label"
+              ]
+            },
+            "tablet": {
+              "components": [
+                "icon",
+                "label"
+              ]
+            },
+            "viewMode": "all"
+          },
+          "scriptConfig": {
+            "pluginFunction": "exec",
+            "sourceFile": "00_Utility/Templates/canvasColorUpdater.js"
+          }
+        }
+      ],
+      "mobileStyles": [],
+      "name": "not-draft",
+      "position": {
+        "desktop": {
+          "allViews": {
+            "position": "top"
+          }
+        },
+        "mobile": {
+          "allViews": {
+            "position": "bottom"
+          }
+        },
+        "tablet": {
+          "allViews": {
+            "position": "bottom"
+          }
+        }
+      },
+      "updated": "2026-05-25T19:36:22.410Z"
+    }
+  ],
+  "version": 20260122.1,
+  "webviewerToolbar": null,
+  "whatsnew_version": "1.29"
+}

@@ -1,0 +1,14 @@
+/* .status-bar-item.plugin-word-count > .status-bar-item-segment:last-child { */
+.status-bar .status-bar-item.plugin-word-count {
+    display: none !important;
+}
+
+/* Hide specific properties in "Add property" dropdown */
+.suggestion-item[data-suggestion-type="metadata-property"] 
+[data-property-key="Status"],
+.suggestion-item[data-suggestion-type="metadata-property"] 
+[data-property-key="aliases"],
+.suggestion-item[data-suggestion-type="metadata-property"] 
+[data-property-key="cssclass"] {
+  display: none !important;
+}

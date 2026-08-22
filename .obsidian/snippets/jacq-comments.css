@@ -1,0 +1,53 @@
+
+/* Make other formating in the comment softer, not it's full color */
+/* .cm-comment[class*=" "]:not(.cm-comment-start,.cm-comment-end,.cm-list-*) { */
+.cm-comment[class*=" "]:not(.cm-comment-start,.cm-comment-end) {
+  /* color: var(--code-comment)!important; */
+  opacity: 40%;
+}
+.HyperMD-list-line .cm-comment {
+  opacity: 100% !important;
+}
+
+
+/* put [] around comments normally (when not in focus / cursor not on that line) */
+.cm-s-obsidian .cm-comment.cm-comment-start::before,
+.cm-s-obsidian .cm-comment.cm-em:not(:has(~ .cm-comment-start, ~ .cm-comment-end),.cm-comment-end,.cm-comment-start)::before,
+.cm-s-obsidian .cm-comment.cm-strong:not(:has(~ .cm-comment-start, ~ .cm-comment-end),.cm-comment-end,.cm-comment-start)::before{
+/* .cm-s-obsidian .cm-comment:first-of-type::before { */
+  content: "[";
+}  
+.cm-s-obsidian .cm-comment.cm-comment-end::after,
+.cm-s-obsidian .cm-comment.cm-em:not(:has(~ .cm-comment-start, ~ .cm-comment-end),.cm-comment-end,.cm-comment-start)::after,
+.cm-s-obsidian .cm-comment.cm-strong:not(:has(~ .cm-comment-start, ~ .cm-comment-end),.cm-comment-end,.cm-comment-start)::after{
+  content: "]";
+}
+
+.cm-s-obsidian .cm-comment.cm-comment-start::before,
+.cm-s-obsidian .cm-comment.cm-comment-end::after {
+  margin-left: -.1rem;
+  color: var(--code-comment);
+  font-size: var(--font-text-size);
+}
+
+
+
+/* hide the %% normally (cursor not on that line) */
+.cm-s-obsidian .cm-comment.cm-formatting {
+  color: transparent;
+  font-size: 0;
+}
+
+
+/* when on that line, hide the [] */
+.cm-active .cm-comment.cm-comment-end::after, .cm-active .cm-comment.cm-comment-start::before,
+.cm-comment-start.cm-em, .cm-comment-end.cm-em,
+.cm-comment-start.cm-strong, .cm-comment-end.cm-strong {
+  content: "";
+  margin: 0;
+}
+/* & show the %% again */
+.cm-s-obsidian .cm-active span.cm-comment.cm-formatting {
+  color: var(--code-comment);
+  font-size: var(--font-text-size);
+}

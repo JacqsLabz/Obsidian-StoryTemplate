@@ -1,0 +1,13 @@
+{
+  "types": {
+    "Order": "number",
+    "tags": "tags",
+    "aliases": "aliases",
+    "cssclasses": "multitext",
+    "#vasaki marks": "number",
+    "species": "multitext",
+    "# vasaki marks": "number",
+    "stories": "multitext",
+    "# dempire marks": "number"
+  }
+}

@@ -1,0 +1,51 @@
+/* title for a canvas in a canvas */
+.canvas-node-label {
+    font-size: 20px !important;  /* Adjust size as needed */
+    font-weight: bold;
+    text-shadow: 1px 1px 2px rgba(0,0,0,0.2); /* Optional: improves readability */
+}
+/* title for a group in a canvas */
+.canvas-group-label {
+    font-size: 55px !important;
+    font-weight: bold;
+    text-shadow: 1px 1px 2px rgba(0,0,0,0.2); /* Optional: improves readability */
+}   
+/* title for notes */
+/* .canvas-node-label {
+    font-size: 32px !important;
+    color: white;
+    text-shadow: 1px 1px 3px #000;
+}    */
+.canvas-node-placeholder {
+    font-size: 38px !important;
+    /* font-weight: bold; */
+    line-height: 1.3;
+    text-shadow: 1px 1px 3px #000;
+}
+/* for when REALLY zoomed out */
+/* .canvas-node-label, .canvas-group-label {
+    font-size: calc(28px / max(0.2, var(--zoom-multiplier))) !important;
+    transform: translateX(-50%) translateY(-100%) !important;
+}    */
+.canvas-node-placeholder {
+    font-size: calc(24px * var(--zoom-multiplier)) !important;
+    /* white-space: nowrap !important; */
+    overflow: visible !important;
+
+    /* transform: translateX(-50%) translateY(-100%) !important; */
+    /* min-font-size: 16px;  */
+    /* Conceptual — actual min depends on base size */
+}
+/* always show full title (no...) */
+/* .canvas-node-label, .canvas-group-label {
+    white-space: nowrap !important;
+    overflow: visible !important;
+}    */
+
+
+/* .canvas-node-container .markdown-rendered h1 {
+    font-size: 260px;
+}
+.canvas-node-container p {
+    font-size: 200px;
+} */

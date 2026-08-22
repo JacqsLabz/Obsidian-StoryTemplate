@@ -1,0 +1,43 @@
+/* 1. Hide the "Properties" heading and "Add property" button on Canvas */
+.canvas-node .metadata-properties-heading,
+.canvas-node .metadata-add-button {
+    display: none !important;
+}
+
+/* 2. Remove the padding/margins around the properties block on Canvas */
+.canvas-node .metadata-content {
+    padding: 0px !important;
+}
+
+/* 3. Make individual properties tighter (less vertical height) */
+.canvas-node .metadata-property {
+    padding-top: 0px !important;
+    padding-bottom: 0px !important;
+    min-height: 22px !important; /* Shrinks from the default ~30px */
+}
+
+/* 4. (Optional) Hide specific properties ONLY on canvas, just in case */
+/* Just change "tags" to whatever property key you want to hide */
+/* .canvas-node .metadata-property[data-property-key="tags"] {
+    display: none !important;
+} */
+
+/* 4. (Optional) Hide specific properties ONLY on canvas, just in case */
+.canvas-node .metadata-property {
+    display: none !important;
+}
+
+/* canvas cards have less space below and above properties (to help with cards that have no prop's to show */
+.canvas-node .metadata-container, .canvas-node .inline-title {
+    margin-bottom: 5px;
+}
+
+/* Hide a specific property completely from the UI */
+/* Replace "notetoolbar" with the exact name of your property */
+.metadata-property[data-property-key="notetoolbar"] {
+    display: none !important;
+}
+
+.metadata-property[data-property-key="tags"],.metadata-property[data-property-key="order"],.metadata-property[data-property-key="summary"] {
+    display: flex !important;
+}

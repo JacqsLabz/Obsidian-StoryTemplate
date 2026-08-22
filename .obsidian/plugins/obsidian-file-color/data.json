@@ -1,0 +1,47 @@
+{
+  "cascadeColors": true,
+  "colorBackground": true,
+  "palette": [
+    {
+      "id": "vX5fEhCRgoQEvHBmppMwV",
+      "name": "Jessica",
+      "value": "#f11e1e"
+    },
+    {
+      "id": "RsYWJ2oJctrMdPzt8HAC5",
+      "name": "Sally",
+      "value": "#fbe918"
+    },
+    {
+      "id": "jeyZx9St5VfmkGUItNIyF",
+      "name": "John",
+      "value": "#2f7dd6"
+    }
+  ],
+  "fileColors": [
+    {
+      "path": "Sarila.canvas",
+      "color": "vX5fEhCRgoQEvHBmppMwV"
+    },
+    {
+      "path": "05_Stories/10_MiddleAges/Sevton",
+      "color": "jeyZx9St5VfmkGUItNIyF"
+    },
+    {
+      "path": "05_Stories/10_MiddleAges/Sevton's Death & Wasted",
+      "color": "jeyZx9St5VfmkGUItNIyF"
+    },
+    {
+      "path": "05_Stories/10_MiddleAges/Daxton/Kutta's favor",
+      "color": "RsYWJ2oJctrMdPzt8HAC5"
+    },
+    {
+      "path": "Sarila.md",
+      "color": "vX5fEhCRgoQEvHBmppMwV"
+    },
+    {
+      "path": "Sarila.base",
+      "color": "vX5fEhCRgoQEvHBmppMwV"
+    }
+  ]
+}

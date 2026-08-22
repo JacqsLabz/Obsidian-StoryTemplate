@@ -1,0 +1,13 @@
+{
+  "accentColor": "",
+  "nativeMenus": false,
+  "enabledCssSnippets": [
+    "wordcount",
+    "comments",
+    "canvas",
+    "canvas-compact-properties",
+    "canvas-font-size",
+    "jacq-comments",
+    "notes-hide-wordcount"
+  ]
+}
