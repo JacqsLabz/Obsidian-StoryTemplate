@@ -1,0 +1,22 @@
+filters:
+  and:
+    - file.inFolder(this.file.folder) && file.path != this.file.path
+    - '!file.ext.containsAny("txt", "base", "canvas")'
+    - '!file.name.containsAny("metadata", "untitled snapshot")'
+    - '!file.fullname.containsAny("Notes.md", "Base.md")'
+views:
+  - type: table
+    name: Table
+    order:
+      - Order
+      - file.name
+      - file.tags
+      - summary
+    sort:
+      - property: Order
+        direction: ASC
+      - property: file.name
+        direction: ASC
+    columnSize:
+      note.Order: 50
+      file.name: 165
