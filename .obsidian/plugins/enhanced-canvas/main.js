@@ -27,7 +27,7 @@ __export(main_exports, {
   default: () => EnhancedCanvas
 });
 module.exports = __toCommonJS(main_exports);
-var import_obsidian4 = require("obsidian");
+var import_obsidian6 = require("obsidian");
 
 // node_modules/monkey-around/dist/index.mjs
 function around(obj, factories) {
@@ -66,7 +66,133 @@ function around1(obj, method, createWrapper) {
 }
 
 // src/CanvasExploder.ts
+var import_obsidian2 = require("obsidian");
+
+// src/utils.ts
 var import_obsidian = require("obsidian");
+function isVersionNewer(currentVersion, oldVersion) {
+  if (!currentVersion || !oldVersion)
+    return false;
+  if (currentVersion === oldVersion)
+    return false;
+  const current = currentVersion.split("-")[0].split(".").map(Number);
+  const old = oldVersion.split("-")[0].split(".").map(Number);
+  for (let i = 0; i < 3; i++) {
+    const v1 = current[i] || 0;
+    const v2 = old[i] || 0;
+    if (v1 > v2)
+      return true;
+    if (v1 < v2)
+      return false;
+  }
+  return false;
+}
+function randomId(length = 16) {
+  const byteLength = Math.ceil(length / 2);
+  const array = new Uint8Array(byteLength);
+  window.crypto.getRandomValues(array);
+  return Array.from(
+    array,
+    (byte) => byte.toString(16).padStart(2, "0")
+  ).join("").substring(0, length);
+}
+var TagQueryParser = class {
+  /**
+   * Parses a query string into a TagQuery structure.
+   * Example: "#a #b -#c OR #d" -> [ {include: ["#a", "#b"], exclude: ["#c"]}, {include: ["#d"], exclude: []} ]
+   */
+  static parse(input) {
+    if (!input.trim())
+      return [];
+    const groups = input.split(/(?:\s+|^)OR(?:\s+|$)|\|/i);
+    const query = [];
+    for (const groupStr of groups) {
+      const trimmedGroup = groupStr.trim();
+      if (!trimmedGroup)
+        continue;
+      const whitespaceTokens = trimmedGroup.split(/\s+/);
+      const group = { include: [], exclude: [] };
+      for (let wToken of whitespaceTokens) {
+        if (!wToken)
+          continue;
+        if (wToken.toUpperCase() === "AND")
+          continue;
+        let isExclude = false;
+        if (wToken.startsWith("-")) {
+          isExclude = true;
+          wToken = wToken.substring(1);
+        }
+        const tagTokens = wToken.split("#");
+        for (const tagToken of tagTokens) {
+          if (!tagToken)
+            continue;
+          const tag = tagToken.toLowerCase().replace(/[,;]+$/, "");
+          if (!tag)
+            continue;
+          if (isExclude) {
+            group.exclude.push(tag);
+          } else {
+            group.include.push(tag);
+          }
+        }
+      }
+      if (group.include.length > 0) {
+        query.push(group);
+      }
+    }
+    return query;
+  }
+};
+var TagLogicResolver = class {
+  /**
+   * Matches a file against a TagQuery.
+   */
+  static matchesQuery(file, query, metadataCache) {
+    if (query.length === 0)
+      return false;
+    const cache = metadataCache.getFileCache(file);
+    if (!cache)
+      return false;
+    const fileTags = this.getRobustFileTags(cache);
+    return query.some((group) => this.matchesGroup(fileTags, group));
+  }
+  /**
+   * More robust version of getAllTags that handles various frontmatter formats.
+   */
+  static getRobustFileTags(cache) {
+    const tags = [...(0, import_obsidian.getAllTags)(cache) || []];
+    if (cache.frontmatter) {
+      const fmTags = cache.frontmatter.tags || cache.frontmatter.tag;
+      if (fmTags) {
+        if (Array.isArray(fmTags)) {
+          fmTags.forEach((t) => {
+            if (typeof t === "string")
+              tags.push(t);
+          });
+        } else if (typeof fmTags === "string") {
+          tags.push(...fmTags.split(/[\s,]+/));
+        }
+      }
+    }
+    return tags;
+  }
+  static matchesGroup(fileTags, group) {
+    if (group.include.length === 0)
+      return false;
+    const normalizedFileTags = fileTags.map((t) => (t.startsWith("#") ? t.substring(1) : t).toLowerCase());
+    const allIncluded = group.include.every(
+      (qTag) => normalizedFileTags.some((fTag) => fTag === qTag || fTag.startsWith(`${qTag}/`))
+    );
+    if (!allIncluded)
+      return false;
+    const anyExcluded = group.exclude.some(
+      (qTag) => normalizedFileTags.some((fTag) => fTag === qTag || fTag.startsWith(`${qTag}/`))
+    );
+    return !anyExcluded;
+  }
+};
+
+// src/CanvasExploder.ts
 var HEADING_LIMIT = 10;
 var COMPACT_HEIGHT = 50;
 var LEAF_HEIGHT = 170;
@@ -79,7 +205,7 @@ var CanvasExploder = class {
     this.plugin = plugin;
   }
   checkAndAddMenu(menu, title) {
-    const activeView = this.plugin.app.workspace.getActiveViewOfType(import_obsidian.ItemView);
+    const activeView = this.plugin.app.workspace.getActiveViewOfType(import_obsidian2.ItemView);
     if (activeView && activeView.getViewType() === "canvas") {
       const canvas = activeView.canvas;
       if (canvas) {
@@ -89,13 +215,13 @@ var CanvasExploder = class {
           if (node && node.file) {
             menu.addItem((item) => {
               item.setTitle(title).onClick(() => {
-                this.explodeFileNode(canvas, node);
+                void this.explodeFileNode(canvas, node);
               });
             });
           } else if (node && node.text !== void 0) {
             menu.addItem((item) => {
               item.setTitle(title).onClick(() => {
-                this.explodeTextNode(canvas, node);
+                void this.explodeTextNode(canvas, node);
               });
             });
           }
@@ -108,30 +234,21 @@ var CanvasExploder = class {
    * Called from main.ts when a text node context menu is shown.
    */
   addTextNodeMenu(menu, node) {
-    const activeView = this.plugin.app.workspace.getActiveViewOfType(import_obsidian.ItemView);
+    const activeView = this.plugin.app.workspace.getActiveViewOfType(import_obsidian2.ItemView);
     if (!activeView || activeView.getViewType() !== "canvas")
       return;
     const canvas = activeView.canvas;
     if (!canvas)
       return;
     menu.addItem((item) => {
-      item.setTitle("Split by Headings").onClick(() => {
-        this.explodeTextNode(canvas, node);
+      item.setTitle("Split by headings").onClick(() => {
+        void this.explodeTextNode(canvas, node);
       });
     });
   }
-  randomId(length = 16) {
-    const byteLength = Math.ceil(length / 2);
-    const array = new Uint8Array(byteLength);
-    window.crypto.getRandomValues(array);
-    return Array.from(
-      array,
-      (byte) => byte.toString(16).padStart(2, "0")
-    ).join("").substring(0, length);
-  }
   sanitizeHeading(rawHeading) {
     let text = rawHeading.replace(/\[\[|\]\]/g, "");
-    text = text.replace(/[|#:]/g, " ");
+    text = text.replace(/[[\](){}<>|#:]/g, " ");
     text = text.replace(/\s+/g, " ");
     return text.trim();
   }
@@ -176,120 +293,47 @@ var CanvasExploder = class {
    * Deconstructs a single file node into a hierarchical tree of connected nodes representing its internal headings,
    * replacing the original node to visualize the document's structure directly on the canvas.
    */
-  async explodeFileNode(canvas, originalNode) {
-    var _a;
+  explodeFileNode(canvas, originalNode) {
     const targetFile = originalNode.file;
+    if (!targetFile)
+      return;
     const cache = this.plugin.app.metadataCache.getFileCache(targetFile);
     if (!cache || !cache.headings || cache.headings.length === 0) {
-      new import_obsidian.Notice(`File "${targetFile.basename}" does not contain any headings to explode.`);
+      new import_obsidian2.Notice(`File "${targetFile.basename}" does not contain any headings to explode.`);
       return;
     }
-    const headings = cache.headings;
-    const isCompactMode = headings.length > HEADING_LIMIT;
-    const baseX = originalNode.x;
-    let currentY = originalNode.y;
-    const width = Math.max((_a = originalNode.width) != null ? _a : 0, DEFAULT_WIDTH);
-    const minLevel = Math.min(...headings.map((h) => h.level));
-    const nodeStack = [];
-    const edgesToAdd = [];
-    const newNodesSet = /* @__PURE__ */ new Set();
-    let createdCount = 0;
-    for (let i = 0; i < headings.length; i++) {
-      const heading = headings[i];
-      const nextHeading = headings[i + 1];
-      const isParent = nextHeading && nextHeading.level > heading.level;
-      let nodeHeight;
-      if (isParent) {
-        nodeHeight = COMPACT_HEIGHT;
-      } else if (isCompactMode) {
-        nodeHeight = LEAF_HEIGHT;
-      } else {
-        nodeHeight = typeof originalNode.height === "number" && originalNode.height > COMPACT_HEIGHT ? Math.min(MAX_HEIGHT, originalNode.height) : COMPACT_HEIGHT;
-      }
-      const levelOffset = heading.level - minLevel;
-      const currentX = baseX + levelOffset * (width + GAP_X);
-      const cleanText = this.sanitizeHeading(heading.heading);
-      const subpath = `#${cleanText}`;
-      let newNode;
-      try {
-        newNode = canvas.createFileNode({
-          file: targetFile,
-          subpath,
-          pos: { x: currentX, y: currentY },
-          size: { width, height: nodeHeight },
-          save: false,
-          focus: false
-        });
-      } catch (e) {
-        console.error(`Failed to create node for heading: ${subpath}`, e);
-        continue;
-      }
-      if (!newNode)
-        continue;
-      createdCount++;
-      newNodesSet.add(newNode);
-      while (nodeStack.length > 0) {
-        const lastEntry = nodeStack[nodeStack.length - 1];
-        if (lastEntry.level >= heading.level) {
-          nodeStack.pop();
-        } else {
-          break;
-        }
-      }
-      if (nodeStack.length > 0) {
-        const parentEntry = nodeStack[nodeStack.length - 1];
-        edgesToAdd.push({
-          id: this.randomId(),
-          fromNode: parentEntry.nodeId,
-          fromSide: "bottom",
-          toNode: newNode.id,
-          toSide: "left"
-        });
-      }
-      nodeStack.push({
-        level: heading.level,
-        nodeId: newNode.id
-      });
-      currentY += nodeHeight + GAP_Y;
-    }
-    if (edgesToAdd.length > 0) {
-      const currentData = canvas.getData();
-      currentData.edges.push(...edgesToAdd);
-      canvas.setData(currentData);
-    }
-    if (createdCount > 0) {
-      canvas.removeNode(originalNode);
-    }
-    if (newNodesSet.size > 0) {
-      canvas.deselectAll();
-      for (const node of newNodesSet) {
-        canvas.select(node);
-      }
-      canvas.zoomToSelection();
-    }
-    canvas.requestSave(false);
-    new import_obsidian.Notice(`Explosion complete, created ${createdCount} nodes.`);
+    const createdCount = this.buildSectionTree(
+      canvas,
+      originalNode,
+      cache.headings,
+      (heading) => ({
+        type: "file",
+        file: targetFile.path,
+        subpath: `#${this.sanitizeHeading(heading.heading)}`
+      }),
+      COMPACT_HEIGHT
+    );
+    new import_obsidian2.Notice(`Explosion complete, created ${createdCount} nodes.`);
   }
   /**
-   * Deconstructs a single text node into a hierarchical tree of connected nodes representing its internal headings,
-   * replacing the original node to visualize the card's structure directly on the canvas.
+   * Shared explode core: lays out one node per section (indented by heading
+   * level), connects each section to its nearest shallower parent, then swaps
+   * the original node for the new tree and selects it.
+   *
+   * @param nodePayload - Per-section node fields (e.g. file+subpath, or text).
+   * @param fallbackLeafHeight - Leaf height when the original node has no usable height.
+   * @returns The number of nodes created.
    */
-  async explodeTextNode(canvas, originalNode) {
-    var _a;
-    const rawText = originalNode.text;
-    const sections = this.parseMarkdownHeadings(rawText);
-    if (sections.length === 0) {
-      new import_obsidian.Notice("No headings found to split.");
-      return;
-    }
+  buildSectionTree(canvas, originalNode, sections, nodePayload, fallbackLeafHeight) {
+    var _a, _b;
+    const isCompactMode = sections.length > HEADING_LIMIT;
     const baseX = originalNode.x;
-    const baseY = originalNode.y;
-    const originalWidth = (_a = originalNode.width) != null ? _a : 0;
+    let currentY = originalNode.y;
     const originalHeight = originalNode.height;
-    const originalNodeId = originalNode.id;
-    const width = Math.max(originalWidth, DEFAULT_WIDTH);
+    const width = Math.max((_a = originalNode.width) != null ? _a : 0, DEFAULT_WIDTH);
     const minLevel = Math.min(...sections.map((s) => s.level));
-    let currentY = baseY;
+    const currentData = canvas.getData();
+    const originalData = (_b = currentData.nodes.find((n) => n.id === originalNode.id)) != null ? _b : {};
     const nodeStack = [];
     const newNodesData = [];
     const newEdgesData = [];
@@ -297,22 +341,21 @@ var CanvasExploder = class {
       const section = sections[i];
       const nextSection = sections[i + 1];
       const isParent = nextSection && nextSection.level > section.level;
-      const isCompactMode = sections.length > HEADING_LIMIT;
       let nodeHeight;
       if (isParent) {
         nodeHeight = COMPACT_HEIGHT;
       } else if (isCompactMode) {
         nodeHeight = LEAF_HEIGHT;
       } else {
-        nodeHeight = typeof originalHeight === "number" && originalHeight > COMPACT_HEIGHT ? Math.min(MAX_HEIGHT, originalHeight) : LEAF_HEIGHT;
+        nodeHeight = typeof originalHeight === "number" && originalHeight > COMPACT_HEIGHT ? Math.min(MAX_HEIGHT, originalHeight) : fallbackLeafHeight;
       }
       const levelOffset = section.level - minLevel;
       const currentX = baseX + levelOffset * (width + GAP_X);
-      const newNodeId = this.randomId();
+      const newNodeId = randomId();
       newNodesData.push({
+        ...originalData,
+        ...nodePayload(section),
         id: newNodeId,
-        type: "text",
-        text: section.content,
         x: currentX,
         y: currentY,
         width,
@@ -329,7 +372,7 @@ var CanvasExploder = class {
       if (nodeStack.length > 0) {
         const parentEntry = nodeStack[nodeStack.length - 1];
         newEdgesData.push({
-          id: this.randomId(),
+          id: randomId(),
           fromNode: parentEntry.nodeId,
           fromSide: "bottom",
           toNode: newNodeId,
@@ -342,10 +385,9 @@ var CanvasExploder = class {
       });
       currentY += nodeHeight + GAP_Y;
     }
-    const currentData = canvas.getData();
-    currentData.nodes = currentData.nodes.filter((n) => n.id !== originalNodeId);
+    currentData.nodes = currentData.nodes.filter((n) => n.id !== originalNode.id);
     currentData.edges = currentData.edges.filter(
-      (e) => e.fromNode !== originalNodeId && e.toNode !== originalNodeId
+      (e) => e.fromNode !== originalNode.id && e.toNode !== originalNode.id
     );
     currentData.nodes.push(...newNodesData);
     currentData.edges.push(...newEdgesData);
@@ -359,12 +401,35 @@ var CanvasExploder = class {
       }
     }
     canvas.zoomToSelection();
-    new import_obsidian.Notice(`Split complete, created ${sections.length} cards.`);
+    return newNodesData.length;
+  }
+  /**
+   * Deconstructs a single text node into a hierarchical tree of connected nodes representing its internal headings,
+   * replacing the original node to visualize the card's structure directly on the canvas.
+   */
+  explodeTextNode(canvas, originalNode) {
+    var _a;
+    const sections = this.parseMarkdownHeadings((_a = originalNode.text) != null ? _a : "");
+    if (sections.length === 0) {
+      new import_obsidian2.Notice("No headings found to split.");
+      return;
+    }
+    const createdCount = this.buildSectionTree(
+      canvas,
+      originalNode,
+      sections,
+      (section) => ({
+        type: "text",
+        text: section.content
+      }),
+      LEAF_HEIGHT
+    );
+    new import_obsidian2.Notice(`Split complete, created ${createdCount} cards.`);
   }
 };
 
 // src/SendToCanvas.ts
-var import_obsidian2 = require("obsidian");
+var import_obsidian3 = require("obsidian");
 var SendToCanvas = class {
   constructor(plugin) {
     this.selectedCanvas = null;
@@ -374,7 +439,7 @@ var SendToCanvas = class {
   handleSendToCanvas() {
     const currentFile = this.getCurrentMarkdownFile();
     if (!currentFile) {
-      new import_obsidian2.Notice("Please open a Markdown file to send to the Canvas.");
+      new import_obsidian3.Notice("Please open a Markdown file to send to the Canvas.");
       return;
     }
     this.promptCanvasSelectionAndInsert(currentFile);
@@ -382,28 +447,27 @@ var SendToCanvas = class {
   handleSendToSelectedCanvas() {
     const currentFile = this.getCurrentMarkdownFile();
     if (!currentFile) {
-      new import_obsidian2.Notice("Please open a Markdown file to send to the Canvas.");
+      new import_obsidian3.Notice("Please open a Markdown file to send to the Canvas.");
       return;
     }
     if (this.selectedCanvas) {
-      this.addFileNodeToCanvas(currentFile, this.selectedCanvas);
-      new import_obsidian2.Notice(`Using previously selected Canvas: ${this.selectedCanvas.name}`);
+      void this.addFileNodeToCanvas(currentFile, this.selectedCanvas);
+      new import_obsidian3.Notice(`Using previously selected Canvas: ${this.selectedCanvas.name}`);
     } else {
-      new import_obsidian2.Notice(`Failed to send. No Canvas file selected yet.`);
+      new import_obsidian3.Notice(`Failed to send. No Canvas file selected yet.`);
       this.promptCanvasSelectionAndInsert(currentFile);
     }
   }
   getCurrentMarkdownFile() {
-    const leaf = this.plugin.app.workspace.activeLeaf;
-    if (!leaf || !(leaf.view.file instanceof import_obsidian2.TFile) || leaf.view.file.extension !== "md") {
+    const view = this.plugin.app.workspace.getActiveViewOfType(import_obsidian3.MarkdownView);
+    if (!(view == null ? void 0 : view.file) || view.file.extension !== "md")
       return null;
-    }
-    return leaf.view.file;
+    return view.file;
   }
   promptCanvasSelectionAndInsert(targetFile) {
     const canvasFiles = this.getCanvasFiles();
     if (!canvasFiles.length) {
-      new import_obsidian2.Notice("No Canvas files found in vault.");
+      new import_obsidian3.Notice("No Canvas files found in vault.");
       return;
     }
     const modal = new CanvasFileSuggestModal(
@@ -412,7 +476,7 @@ var SendToCanvas = class {
       (canvasFile) => {
         this.selectedCanvas = canvasFile;
         this.updateStatusBar();
-        this.addFileNodeToCanvas(targetFile, canvasFile);
+        void this.addFileNodeToCanvas(targetFile, canvasFile);
       }
     );
     modal.open();
@@ -426,14 +490,24 @@ var SendToCanvas = class {
   async addFileNodeToCanvas(targetFile, canvasFile) {
     if (!canvasFile || !canvasFile.name)
       return;
-    const canvasContent = await this.plugin.app.vault.read(canvasFile);
     let canvasData;
-    try {
-      canvasData = JSON.parse(canvasContent || '{"nodes":[], "edges":[]}');
-    } catch (e) {
-      new import_obsidian2.Notice(`Error reading Canvas JSON for ${canvasFile.name}.`);
-      console.error("Canvas JSON Parse Error:", e);
-      return;
+    const canvasLeaves = this.plugin.app.workspace.getLeavesOfType("canvas");
+    const openLeaf = canvasLeaves.find((leaf) => {
+      var _a;
+      return ((_a = leaf.view.file) == null ? void 0 : _a.path) === canvasFile.path;
+    });
+    const canvasView = openLeaf ? openLeaf.view : null;
+    if (canvasView && canvasView.canvas) {
+      canvasData = canvasView.canvas.getData();
+    } else {
+      const canvasContent = await this.plugin.app.vault.read(canvasFile);
+      try {
+        canvasData = JSON.parse(canvasContent || '{"nodes":[], "edges":[]}');
+      } catch (e) {
+        new import_obsidian3.Notice(`Error reading Canvas JSON for ${canvasFile.name}.`);
+        console.error("Canvas JSON Parse Error:", e);
+        return;
+      }
     }
     if (!Array.isArray(canvasData.nodes))
       canvasData.nodes = [];
@@ -441,19 +515,24 @@ var SendToCanvas = class {
       canvasData.edges = [];
     const existingNode = canvasData.nodes.find((node) => node.type === "file" && node.file === targetFile.path);
     if (existingNode) {
-      new import_obsidian2.Notice(`${targetFile.basename} already exists in Canvas.`);
+      new import_obsidian3.Notice(`${targetFile.basename} already exists in Canvas.`);
       return;
     }
     const newNode = this.createNodeAtBottom(targetFile, canvasData.nodes);
     canvasData.nodes.push(newNode);
-    const updatedContent = JSON.stringify(canvasData, null, 2);
     try {
-      await this.plugin.app.vault.modify(canvasFile, updatedContent);
+      if (canvasView && canvasView.canvas) {
+        canvasView.canvas.setData(canvasData);
+        canvasView.canvas.requestSave();
+      } else {
+        const updatedContent = JSON.stringify(canvasData, null, 2);
+        await this.plugin.app.vault.modify(canvasFile, updatedContent);
+      }
       const internalLink = `[[${canvasFile.name}]]`;
       await this.plugin.updateFrontmatter(targetFile, internalLink, "add", "canvas");
-      new import_obsidian2.Notice(`Added ${targetFile.basename} to Canvas: ${canvasFile.basename}`);
+      new import_obsidian3.Notice(`Added ${targetFile.basename} to Canvas: ${canvasFile.basename}`);
     } catch (e) {
-      new import_obsidian2.Notice(`Failed to add to Canvas: ${canvasFile.name}`);
+      new import_obsidian3.Notice(`Failed to add to Canvas: ${canvasFile.name}`);
       console.error("Canvas Modify Error:", e);
     }
   }
@@ -465,9 +544,9 @@ var SendToCanvas = class {
    * @returns The new node.
    */
   createNodeAtBottom(file, existingNodes) {
-    const id = this.randomId();
-    const WIDTH = 400;
-    const HEIGHT = 400;
+    const id = randomId();
+    const WIDTH = this.plugin.settings.defaultFileNodeWidth;
+    const HEIGHT = this.plugin.settings.defaultFileNodeHeight;
     const GAP = 100;
     const DEFAULT_X = -200;
     let startY = -200;
@@ -489,9 +568,6 @@ var SendToCanvas = class {
       type: "file",
       file: file.path
     };
-  }
-  randomId() {
-    return Math.random().toString(36).substring(2, 10) + Math.random().toString(36).substring(2, 10);
   }
   getCanvasFiles() {
     return this.plugin.app.vault.getFiles().filter((file) => file.extension === "canvas");
@@ -522,10 +598,10 @@ var SendToCanvas = class {
       this.selectedCanvas = null;
       this.clearStatusBar();
       if (showNotice) {
-        new import_obsidian2.Notice(`Cleared selected Canvas: ${fileName}`);
+        new import_obsidian3.Notice(`Cleared selected Canvas: ${fileName}`);
       }
     } else if (showNotice) {
-      new import_obsidian2.Notice("No Canvas file is currently selected.");
+      new import_obsidian3.Notice("No Canvas file is currently selected.");
     }
   }
   clearStatusBar() {
@@ -535,7 +611,7 @@ var SendToCanvas = class {
     }
   }
 };
-var CanvasFileSuggestModal = class extends import_obsidian2.FuzzySuggestModal {
+var CanvasFileSuggestModal = class extends import_obsidian3.FuzzySuggestModal {
   constructor(app, files, onSelect) {
     super(app);
     this.files = files;
@@ -548,46 +624,322 @@ var CanvasFileSuggestModal = class extends import_obsidian2.FuzzySuggestModal {
   getItemText(file) {
     return file.path;
   }
-  onChooseItem(file, evt) {
+  onChooseItem(file, _evt) {
     this.onSelect(file);
     this.close();
+  }
+};
+
+// src/AdvancedTagSuggestModal.ts
+var import_obsidian4 = require("obsidian");
+var NODE_GAP = 20;
+var AdvancedTagSuggestModal = class extends import_obsidian4.Modal {
+  constructor(app, plugin, canvas, position) {
+    super(app);
+    this.suggestions = [];
+    this.selectedIndex = -1;
+    this.allTags = [];
+    this.plugin = plugin;
+    this.canvas = canvas;
+    this.position = position;
+    this.allTags = this.getTags();
+  }
+  onOpen() {
+    const { contentEl, titleEl } = this;
+    titleEl.setText("Add notes by tag (Advanced)");
+    contentEl.createEl("p", {
+      text: "Use space for AND, 'OR' for OR, and '-' for NOT. Example: #tag1 #tag2 -#tag3",
+      cls: "setting-item-description"
+    });
+    const inputContainer = contentEl.createDiv({ cls: "advanced-tag-input-container" });
+    this.inputComponent = new import_obsidian4.TextComponent(inputContainer);
+    this.inputComponent.setPlaceholder("Enter tag query...");
+    this.inputComponent.onChange(() => {
+      this.updateSuggestions();
+    });
+    this.inputComponent.inputEl.addEventListener("keydown", (e) => {
+      if (e.key === "ArrowDown") {
+        e.preventDefault();
+        this.navigateSuggestions(1);
+      } else if (e.key === "ArrowUp") {
+        e.preventDefault();
+        this.navigateSuggestions(-1);
+      } else if (e.key === "Enter") {
+        if (this.selectedIndex !== -1 && this.suggestions.length > 0) {
+          e.preventDefault();
+          this.selectSuggestion(this.suggestions[this.selectedIndex]);
+        } else {
+          this.executeImport();
+        }
+      } else if (e.key === "Escape") {
+        if (this.suggestions.length > 0) {
+          e.preventDefault();
+          this.clearSuggestions();
+        }
+      }
+    });
+    new import_obsidian4.ButtonComponent(inputContainer).setButtonText("Import").setCta().onClick(() => {
+      this.executeImport();
+    });
+    this.suggestionContainer = contentEl.createDiv({ cls: "advanced-tag-suggestions" });
+    this.inputComponent.inputEl.focus();
+  }
+  /**
+   * Retrieves all tags from the metadata cache.
+   * Note: getTags() can be stale-on-open if the cache hasn't updated recently,
+   * but it's the most efficient way to get a list of all existing tags.
+   */
+  getTags() {
+    const tagsMap = this.app.metadataCache.getTags();
+    const tags = /* @__PURE__ */ new Set();
+    for (const tag of Object.keys(tagsMap)) {
+      tags.add(tag);
+      this.addParentTags(tag, tags);
+    }
+    return Array.from(tags).sort((a, b) => a.localeCompare(b));
+  }
+  addParentTags(tag, tags) {
+    const parts = tag.split("/");
+    if (parts.length <= 1)
+      return;
+    for (let depth = 1; depth < parts.length; depth++) {
+      tags.add(parts.slice(0, depth).join("/"));
+    }
+  }
+  updateSuggestions() {
+    const value = this.inputComponent.getValue();
+    const cursorPosition = this.inputComponent.inputEl.selectionStart || 0;
+    const beforeCursor = value.substring(0, cursorPosition);
+    const lastWordMatch = beforeCursor.match(/([-#]?)[^\s#|]*$/);
+    if (!lastWordMatch || lastWordMatch[0].length === 0) {
+      this.clearSuggestions();
+      return;
+    }
+    const lastWord = lastWordMatch[0];
+    let query = lastWord;
+    if (query.startsWith("-"))
+      query = query.substring(1);
+    if (query.startsWith("#"))
+      query = query.substring(1);
+    if (query.length === 0) {
+      this.clearSuggestions();
+      return;
+    }
+    this.suggestions = this.allTags.filter((tag) => tag.toLowerCase().includes(query.toLowerCase())).slice(0, 10);
+    this.renderSuggestions();
+  }
+  renderSuggestions() {
+    this.suggestionContainer.empty();
+    this.selectedIndex = -1;
+    if (this.suggestions.length === 0) {
+      this.suggestionContainer.removeClass("is-visible");
+      return;
+    }
+    this.suggestionContainer.addClass("is-visible");
+    this.suggestions.forEach((suggestion, index) => {
+      const div = this.suggestionContainer.createDiv({
+        text: suggestion,
+        cls: "suggestion-item"
+      });
+      div.addEventListener("click", () => {
+        this.selectSuggestion(suggestion);
+      });
+      div.addEventListener("mouseenter", () => {
+        this.setHighlight(index);
+      });
+    });
+    this.setHighlight(0);
+  }
+  setHighlight(index) {
+    const items = this.suggestionContainer.querySelectorAll(".suggestion-item");
+    items.forEach((item, i) => {
+      if (i === index) {
+        item.addClass("is-selected");
+      } else {
+        item.removeClass("is-selected");
+      }
+    });
+    this.selectedIndex = index;
+  }
+  navigateSuggestions(direction) {
+    if (this.suggestions.length === 0)
+      return;
+    let newIndex = this.selectedIndex + direction;
+    if (newIndex < 0)
+      newIndex = this.suggestions.length - 1;
+    if (newIndex >= this.suggestions.length)
+      newIndex = 0;
+    this.setHighlight(newIndex);
+    const highlightedItem = this.suggestionContainer.querySelectorAll(".suggestion-item")[newIndex];
+    if (highlightedItem) {
+      highlightedItem.scrollIntoView({ block: "nearest" });
+    }
+  }
+  selectSuggestion(suggestion) {
+    const value = this.inputComponent.getValue();
+    const cursorPosition = this.inputComponent.inputEl.selectionStart || 0;
+    const beforeCursor = value.substring(0, cursorPosition);
+    const afterCursor = value.substring(cursorPosition);
+    const lastWordMatch = beforeCursor.match(/([-#]?)[^\s#|]*$/);
+    if (lastWordMatch) {
+      const prefix = lastWordMatch[1];
+      const startOfWord = cursorPosition - lastWordMatch[0].length;
+      let newPrefix = prefix;
+      if (!newPrefix) {
+        newPrefix = "#";
+      } else if (newPrefix === "-") {
+        newPrefix = "-#";
+      }
+      let cleanSuggestion = suggestion;
+      if (cleanSuggestion.startsWith("#")) {
+        cleanSuggestion = cleanSuggestion.substring(1);
+      }
+      const newValue = value.substring(0, startOfWord) + newPrefix + cleanSuggestion + afterCursor;
+      this.inputComponent.setValue(newValue);
+      this.inputComponent.inputEl.focus();
+      const newCursorPos = startOfWord + newPrefix.length + cleanSuggestion.length;
+      this.inputComponent.inputEl.setSelectionRange(newCursorPos, newCursorPos);
+    }
+    this.clearSuggestions();
+  }
+  clearSuggestions() {
+    this.suggestionContainer.empty();
+    this.suggestionContainer.removeClass("is-visible");
+    this.suggestions = [];
+    this.selectedIndex = -1;
+  }
+  executeImport() {
+    const queryStr = this.inputComponent.getValue();
+    if (!queryStr.trim())
+      return;
+    const query = TagQueryParser.parse(queryStr);
+    if (query.length === 0) {
+      new import_obsidian4.Notice("Invalid query. Ensure you have at least one inclusion tag (e.g., #tag).");
+      return;
+    }
+    const matchingFiles = this.app.vault.getMarkdownFiles().filter((file) => TagLogicResolver.matchesQuery(file, query, this.app.metadataCache)).sort((a, b) => a.path.localeCompare(b.path));
+    if (matchingFiles.length === 0) {
+      new import_obsidian4.Notice(`No files found matching the query: ${queryStr}`);
+      return;
+    }
+    this.addFilesToCanvas(matchingFiles);
+    this.close();
+  }
+  addFilesToCanvas(files) {
+    const width = this.plugin.settings.defaultFileNodeWidth;
+    const height = this.plugin.settings.defaultFileNodeHeight;
+    const columns = Math.ceil(Math.sqrt(files.length));
+    const createdNodes = [];
+    files.forEach((file, index) => {
+      const x = this.position.x + index % columns * (width + NODE_GAP);
+      const y = this.position.y + Math.floor(index / columns) * (height + NODE_GAP);
+      try {
+        const node = this.canvas.createFileNode({
+          file,
+          pos: { x, y },
+          size: { width, height },
+          save: false,
+          focus: false
+        });
+        if (node) {
+          createdNodes.push(node);
+        }
+      } catch (error) {
+        console.error(`Enhanced Canvas: failed to create Canvas node for ${file.path}`, error);
+      }
+    });
+    if (createdNodes.length === 0) {
+      new import_obsidian4.Notice(`Failed to add notes to Canvas.`);
+      return;
+    }
+    this.selectNodes(createdNodes);
+    this.canvas.requestSave();
+    new import_obsidian4.Notice(`Added ${createdNodes.length} node${createdNodes.length === 1 ? "" : "s"}.`);
+  }
+  selectNodes(nodes) {
+    this.canvas.deselectAll();
+    for (const node of nodes) {
+      this.canvas.selection.add(node);
+    }
+  }
+  onClose() {
+    this.contentEl.empty();
+  }
+};
+
+// src/CanvasTagImport.ts
+var CanvasTagImport = class {
+  constructor(plugin) {
+    this.patched = false;
+    this.menus = /* @__PURE__ */ new WeakSet();
+    this.plugin = plugin;
+  }
+  register() {
+    this.plugin.registerLazyPatcher(() => this.patchCanvasCreationMenu());
+  }
+  patchCanvasCreationMenu() {
+    var _a, _b;
+    if (this.patched)
+      return true;
+    const canvas = this.getAnyCanvas();
+    if (!((_b = (_a = canvas == null ? void 0 : canvas.constructor) == null ? void 0 : _a.prototype) == null ? void 0 : _b.showCreationMenu))
+      return false;
+    const plugin = this.plugin;
+    const tagImport = this;
+    const uninstall = around(canvas.constructor.prototype, {
+      showCreationMenu: (next) => {
+        return function(menu, position, ...args) {
+          const result = next.call(this, menu, position, ...args);
+          tagImport.addMenuItem(menu, this, position);
+          return result;
+        };
+      }
+    });
+    plugin.register(uninstall);
+    this.patched = true;
+    return true;
+  }
+  getAnyCanvas() {
+    var _a, _b;
+    const canvasView = (_b = (_a = this.plugin.app.workspace.getLeavesOfType("canvas")) == null ? void 0 : _a[0]) == null ? void 0 : _b.view;
+    if (!canvasView || canvasView.getViewType() !== "canvas")
+      return null;
+    return canvasView.canvas;
+  }
+  addMenuItem(menu, canvas, position) {
+    if (!canvas || canvas.readonly || this.menus.has(menu))
+      return;
+    this.menus.add(menu);
+    menu.addItem((item) => {
+      item.setTitle("Add notes by tag...").setIcon("hashtag").setSection("create").onClick(() => {
+        new AdvancedTagSuggestModal(this.plugin.app, this.plugin, canvas, position).open();
+      });
+    });
   }
 };
 
 // src/settings.ts
 var DEFAULT_SETTINGS = {
   showReleaseNotes: true,
-  previousRelease: "0.0.0"
+  previousRelease: "0.0.0",
+  enableFrontmatter: true,
+  enableCustomCSS: true,
+  defaultTextNodeWidth: 250,
+  defaultTextNodeHeight: 60,
+  defaultFileNodeWidth: 400,
+  defaultFileNodeHeight: 400
 };
 
-// src/utils.ts
-function isVersionNewer(currentVersion, oldVersion) {
-  if (!currentVersion || !oldVersion)
-    return false;
-  if (currentVersion === oldVersion)
-    return false;
-  const current = currentVersion.split(".").map(Number);
-  const old = oldVersion.split(".").map(Number);
-  for (let i = 0; i < 3; i++) {
-    const v1 = current[i] || 0;
-    const v2 = old[i] || 0;
-    if (v1 > v2)
-      return true;
-    if (v1 < v2)
-      return false;
-  }
-  return false;
-}
-
 // src/ReleaseNotesModal.ts
-var import_obsidian3 = require("obsidian");
+var import_obsidian5 = require("obsidian");
 
 // src/releaseNotesData.ts
 var firstInstallContent = `
 Building upon the original "Property Link" and "Auto Focus" features, I am excited to share three key additions in recent updates.
-### \u2728 Split Node by Headings
+### \u2728 Split Node by Headings & Add Notes by Tag
 
 **Split Node by Headings** instantly deconstructs a single file node into a hierarchical tree based on its headings. You can try this by right-clicking on a file node and selecting "Split Node by Headings" in Canvas.
+**Add Notes
 
 ### \u2728 Send Note to Canvas
 
@@ -604,26 +956,68 @@ With this update, double-clicking the bottom edge activates "Auto-Resize." Now, 
 [View detailed demo at github](https://github.com/RobertttBS/obsidian-enhanced-canvas)
 `;
 var fixCursorShiftIssueInStackTabsCanvas = `
+> [!bug] Fixed in 1.0.29
+> Auto-resize and drag-to-create nodes now patch correctly even when a pinned Canvas tab is left uninitialised (Windows).
+
+> [!success] Refactor in 1.0.28
+> Performance optimizations: faster startup sync and fewer redundant frontmatter writes.
+
+> [!success] Refactor in 1.0.27                                                                                                                                                                   
+> Robust Frontmatter & Property Cleanup
+
+> [!success] Refactor in 1.0.26
+> No new features, but some refactoring.
+
+> [!NOTE] Feature in 1.0.25
+> Add advanced multi-tag suggestions with robust querying.
+
+> [!tip] Feature in 1.0.24
+> Check the Enhanced Canvas settings to configure your preferred width and height for new nodes in Canvas.
+
+> [!note] Feature in 1.0.23
+> Added "Add notes by tag..." right-click menu option to bulk import notes by tag.
+
+> [!bug] Fixed in 1.0.22
+> Fixed an issue where properties failed to sync for pinned Canvas tabs on Windows 11. (I hope the bug is gone.)
+
+> [!note] Feature in 1.0.21
+> Since the Obsidian Canvas core plugin now supports backlinks, I have added a settings view to Enhanced Canvas that allows you to toggle the "Sync Frontmatter" feature (as well as the plugin's CSS). If you prefer not to have this property added, you can simply disable the "Sync Frontmatter" feature.
+
+> [!tip] Feature in 1.0.20
+> Added "Focus" functionality for Linked Mentions.
+
+> [!NOTE] Feature in 1.0.19
+> Added "Split by headings" functionality for Card Nodes.
+
 > [!bug] Fixed in 1.0.18
 > You can now use Canvas with "stacked tabs" enabled without experiencing the cursor position shift issue.
 > This fix applies to the Obsidian Canvas core plugin rather than this specific plugin.
-
-> [!NOTE] Feature in 1.0.19
-> Added "Split by Headings" functionality for Card Nodes.
 `;
 var releaseNotesContent = {
+  "1.0.29": fixCursorShiftIssueInStackTabsCanvas,
+  "1.0.28": fixCursorShiftIssueInStackTabsCanvas,
+  "1.0.27": fixCursorShiftIssueInStackTabsCanvas,
+  "1.0.26": fixCursorShiftIssueInStackTabsCanvas,
+  "1.0.25": fixCursorShiftIssueInStackTabsCanvas,
+  "1.0.24": fixCursorShiftIssueInStackTabsCanvas,
+  "1.0.23": fixCursorShiftIssueInStackTabsCanvas,
+  "1.0.22": fixCursorShiftIssueInStackTabsCanvas,
+  "1.0.21": fixCursorShiftIssueInStackTabsCanvas,
+  "1.0.20": fixCursorShiftIssueInStackTabsCanvas,
   "1.0.19": fixCursorShiftIssueInStackTabsCanvas,
   "1.0.18": fixCursorShiftIssueInStackTabsCanvas,
   "1.0.17": firstInstallContent
 };
 
 // src/ReleaseNotesModal.ts
-var ReleaseNotesModal = class extends import_obsidian3.Modal {
-  constructor(app, plugin, version, isNewInstall) {
+var ReleaseNotesModal = class extends import_obsidian5.Modal {
+  constructor(app, plugin, version, isNewInstall, previousVersion = "0.0.0") {
     super(app);
+    this.renderComponent = new import_obsidian5.Component();
     this.plugin = plugin;
     this.version = version;
     this.isNewInstall = isNewInstall;
+    this.previousVersion = previousVersion;
   }
   onOpen() {
     const { contentEl, titleEl } = this;
@@ -631,53 +1025,101 @@ var ReleaseNotesModal = class extends import_obsidian3.Modal {
       this.isNewInstall ? "Welcome to Enhanced Canvas" : `Enhanced Canvas updated to v${this.version}`
     );
     contentEl.classList.add("enhanced-canvas-release-notes");
-    this.renderContent();
+    this.renderComponent.load();
+    void this.renderContent();
   }
   async renderContent() {
     const { contentEl } = this;
-    const markdownText = this.isNewInstall ? firstInstallContent : releaseNotesContent[this.version] || "Thank you for updating! This update includes bug fixes.";
-    await import_obsidian3.MarkdownRenderer.render(
+    let markdownText = "";
+    if (this.isNewInstall) {
+      markdownText = firstInstallContent;
+    } else {
+      const notes = [];
+      const versions = Object.keys(releaseNotesContent).sort((a, b) => isVersionNewer(a, b) ? -1 : 1);
+      for (const v of versions) {
+        if (isVersionNewer(v, this.previousVersion) && !isVersionNewer(v, this.version)) {
+          notes.push(releaseNotesContent[v]);
+        }
+      }
+      markdownText = notes.length > 0 ? notes.join("\n\n---\n\n") : "Thank you for updating! This update includes bug fixes.";
+    }
+    await import_obsidian5.MarkdownRenderer.render(
       this.app,
       markdownText,
       contentEl,
       "/",
-      this.plugin
+      this.renderComponent
     );
     const buttonContainer = contentEl.createDiv({ cls: "release-notes-button-container" });
     buttonContainer.style.marginTop = "20px";
     buttonContainer.style.textAlign = "right";
-    new import_obsidian3.ButtonComponent(buttonContainer).setButtonText("Got it").setCta().onClick(() => {
+    new import_obsidian5.ButtonComponent(buttonContainer).setButtonText("Got it").setCta().onClick(() => {
       this.close();
     });
   }
-  async onClose() {
+  onClose() {
+    this.renderComponent.unload();
     this.contentEl.empty();
     if (this.plugin.settings.previousRelease !== this.version) {
       this.plugin.settings.previousRelease = this.version;
-      await this.plugin.saveSettings();
+      void this.plugin.saveSettings();
     }
   }
 };
 
 // main.ts
-var EnhancedCanvas = class extends import_obsidian4.Plugin {
+function frontmatterValueToArray(value) {
+  if (Array.isArray(value)) {
+    return value.filter((item) => typeof item === "string" && item.trim() !== "");
+  }
+  if (typeof value === "string" && value.trim() !== "")
+    return [value];
+  return [];
+}
+function escapeRegExp(text) {
+  return text.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+}
+function ensureCanvasKeyOrder(frontmatter, canvasKeys) {
+  const keys = Object.keys(frontmatter);
+  const canvasIndex = keys.indexOf("canvas");
+  if (canvasIndex === -1)
+    return;
+  const targetKeys = new Set(canvasKeys);
+  targetKeys.delete("canvas");
+  const firstTargetIndex = keys.findIndex((key) => targetKeys.has(key));
+  if (firstTargetIndex === -1 || canvasIndex < firstTargetIndex)
+    return;
+  const values = { ...frontmatter };
+  const reordered = keys.filter((key) => key !== "canvas");
+  reordered.splice(reordered.indexOf(keys[firstTargetIndex]), 0, "canvas");
+  for (const key of keys)
+    delete frontmatter[key];
+  for (const key of reordered)
+    frontmatter[key] = values[key];
+}
+var EnhancedCanvas = class extends import_obsidian6.Plugin {
   constructor() {
     super(...arguments);
     this.isMetadataClicked = false;
-    this.autoHeightCheckReference = null;
-    this.autoLinkCheckReference = null;
+    this.canvasStackInterval = null;
+    this.autoHeightUninstaller = null;
+    this.dragTempNodeUninstaller = null;
     /**
      * Modifies a file's frontmatter property to ensure a specific value is either 
      * included or excluded while maintaining list integrity.
      */
     this.updateFrontmatter = async (file, link, action, propertyName) => {
+      if (!this.settings.enableFrontmatter)
+        return;
       await this.app.fileManager.processFrontMatter(file, (fm) => {
         const existingValue = Reflect.get(fm, propertyName);
-        let currentSet = /* @__PURE__ */ new Set();
+        const currentSet = /* @__PURE__ */ new Set();
+        let wasString = false;
         if (Array.isArray(existingValue)) {
           existingValue.filter((item) => typeof item === "string" && item.trim() !== "").forEach((item) => currentSet.add(item));
         } else if (typeof existingValue === "string" && existingValue.trim() !== "") {
           currentSet.add(existingValue);
+          wasString = true;
         }
         if (action === "add") {
           currentSet.add(link);
@@ -686,24 +1128,28 @@ var EnhancedCanvas = class extends import_obsidian4.Plugin {
         }
         const finalArray = Array.from(currentSet);
         if (finalArray.length > 0) {
-          Reflect.set(fm, propertyName, finalArray);
+          if (finalArray.length === 1 && wasString) {
+            Reflect.set(fm, propertyName, finalArray[0]);
+          } else {
+            Reflect.set(fm, propertyName, finalArray);
+          }
         } else {
           Reflect.deleteProperty(fm, propertyName);
         }
+        ensureCanvasKeyOrder(fm, [propertyName]);
       });
     };
     this.ifActiveViewIsCanvas = (commandFn) => (checking) => {
-      const activeView = this.app.workspace.getActiveViewOfType(import_obsidian4.ItemView);
+      const activeView = this.app.workspace.getActiveViewOfType(import_obsidian6.ItemView);
       if ((activeView == null ? void 0 : activeView.getViewType()) !== "canvas") {
         return checking ? false : void 0;
       }
       if (checking)
         return true;
       const canvas = activeView.canvas;
-      const canvasData = canvas == null ? void 0 : canvas.getData();
-      if (!canvas || !canvasData)
+      if (!canvas)
         return;
-      return commandFn(canvas, canvasData);
+      return commandFn(canvas);
     };
   }
   /**
@@ -713,7 +1159,7 @@ var EnhancedCanvas = class extends import_obsidian4.Plugin {
    */
   createMissingEdgesFromLinks(canvas) {
     const selectedNodes = Array.from(canvas.selection);
-    const fileNodes = selectedNodes.filter((node) => node == null ? void 0 : node.filePath);
+    const fileNodes = selectedNodes.filter((node) => !!(node == null ? void 0 : node.filePath));
     const resolvedLinks = this.app.metadataCache.resolvedLinks;
     const currentData = canvas.getData();
     const existingEdgesMap = /* @__PURE__ */ new Map();
@@ -728,6 +1174,8 @@ var EnhancedCanvas = class extends import_obsidian4.Plugin {
     });
     const newEdges = [];
     fileNodes.forEach((sourceNode) => {
+      if (!sourceNode.filePath)
+        return;
       const links = resolvedLinks[sourceNode.filePath];
       if (!links)
         return;
@@ -759,11 +1207,15 @@ var EnhancedCanvas = class extends import_obsidian4.Plugin {
       return;
     const currentData = canvas.getData();
     const selectedNodeIds = new Set(selectedNodes.map((node) => node.id));
+    const nodeById = /* @__PURE__ */ new Map();
+    for (const node of currentData.nodes) {
+      nodeById.set(node.id, node);
+    }
     let didUpdateEdges = false;
     currentData.edges.forEach((edge) => {
       if (selectedNodeIds.has(edge.fromNode) && selectedNodeIds.has(edge.toNode)) {
-        const fromNode = currentData.nodes.find((node) => node.id === edge.fromNode);
-        const toNode = currentData.nodes.find((node) => node.id === edge.toNode);
+        const fromNode = nodeById.get(edge.fromNode);
+        const toNode = nodeById.get(edge.toNode);
         if (fromNode && toNode) {
           const updatedEdge = this.createEdge(fromNode, toNode);
           if (edge.fromSide !== updatedEdge.fromSide || edge.toSide !== updatedEdge.toSide) {
@@ -793,39 +1245,56 @@ var EnhancedCanvas = class extends import_obsidian4.Plugin {
    * add 'canvas' and canvas basename properties to the node frontmatter.
    */
   addProperty(node, propertyName, basename) {
+    var _a;
+    if (!this.settings.enableFrontmatter)
+      return;
+    if (!node.file)
+      return;
     const file = this.app.vault.getFileByPath(node.file);
     if (!file)
       return;
-    this.app.fileManager.processFrontMatter(file, (frontmatter) => {
+    const canvasLink = `[[${propertyName}]]`;
+    const cached = (_a = this.app.metadataCache.getFileCache(file)) == null ? void 0 : _a.frontmatter;
+    if (cached && cached[basename] && frontmatterValueToArray(cached.canvas).includes(canvasLink))
+      return;
+    void this.app.fileManager.processFrontMatter(file, (frontmatter) => {
       if (!frontmatter)
         return;
       if (!frontmatter.canvas) {
         frontmatter.canvas = [];
       }
-      const canvasLink = `[[${propertyName}]]`;
       if (!frontmatter.canvas.includes(canvasLink)) {
         frontmatter.canvas.push(canvasLink);
       }
       if (!frontmatter[basename]) {
         frontmatter[basename] = [];
       }
+      ensureCanvasKeyOrder(frontmatter, [basename]);
     });
   }
   /**
    * For JSON nodes only, which are stored in the canvas file, not the canvas node in Obsidian.
    */
   removeProperty(node, propertyName, basename) {
+    var _a;
+    if (!this.settings.enableFrontmatter)
+      return;
+    if (!node.file)
+      return;
     const file = this.app.vault.getFileByPath(node.file);
     if (!file)
       return;
-    this.app.fileManager.processFrontMatter(file, (frontmatter) => {
+    const canvasLink = `[[${propertyName}]]`;
+    const cached = (_a = this.app.metadataCache.getFileCache(file)) == null ? void 0 : _a.frontmatter;
+    if (!cached || !(basename in cached) && !frontmatterValueToArray(cached.canvas).includes(canvasLink))
+      return;
+    return this.app.fileManager.processFrontMatter(file, (frontmatter) => {
       if (!frontmatter)
         return;
       if (frontmatter[basename]) {
         delete frontmatter[basename];
       }
       if (frontmatter.canvas) {
-        const canvasLink = `[[${propertyName}]]`;
         frontmatter.canvas = frontmatter.canvas.filter((link) => link !== canvasLink);
         if (frontmatter.canvas.length === 0) {
           delete frontmatter.canvas;
@@ -837,14 +1306,18 @@ var EnhancedCanvas = class extends import_obsidian4.Plugin {
    * For JSON nodes only, which are stored in the canvas file, not the canvas node in Obsidian.
    */
   renameProperty(node, oldName, newName) {
+    if (!this.settings.enableFrontmatter)
+      return;
+    if (!node.file)
+      return;
     const file = this.app.vault.getFileByPath(node.file);
     if (!file)
       return;
     const getBaseName = (name) => name.substring(name.lastIndexOf("/") + 1);
     newName = getBaseName(newName);
-    const oldBaseName = oldName.replace(".canvas", "");
-    const newBaseName = newName.replace(".canvas", "");
-    this.app.fileManager.processFrontMatter(file, (frontmatter) => {
+    const oldBaseName = oldName.endsWith(".canvas") ? oldName.slice(0, -7) : oldName;
+    const newBaseName = newName.endsWith(".canvas") ? newName.slice(0, -7) : newName;
+    void this.app.fileManager.processFrontMatter(file, (frontmatter) => {
       if (!frontmatter)
         return;
       const newFrontmatter = Object.fromEntries(
@@ -859,70 +1332,175 @@ var EnhancedCanvas = class extends import_obsidian4.Plugin {
       Object.assign(frontmatter, newFrontmatter);
     });
   }
-  removeAllProperty(canvas, canvasData) {
+  async removeAllProperty(canvas, canvasData) {
+    if (!this.settings.enableFrontmatter)
+      return;
     const nodes = canvasData.nodes;
-    nodes.forEach((node) => {
+    await Promise.all(nodes.map((node) => {
       if (!(node == null ? void 0 : node.file))
         return;
-      this.removeProperty(node, canvas.view.file.name, canvas.view.file.basename);
-    });
+      return this.removeProperty(node, canvas.view.file.name, canvas.view.file.basename);
+    }));
     canvas.setData(canvasData);
     canvas.requestSave(false);
   }
-  async processEdgeUpdate(e) {
-    var _a, _b;
-    const fromNode = (_a = e == null ? void 0 : e.from) == null ? void 0 : _a.node;
-    const toNode = (_b = e == null ? void 0 : e.to) == null ? void 0 : _b.node;
-    if (!fromNode || !toNode)
+  /**
+   * Startup sweep: ensures every markdown note referenced by a canvas carries
+   * the plugin's frontmatter properties (the `canvas` link list plus one
+   * property per canvas holding links to edge-connected notes).
+   *
+   * The desired state is aggregated across all canvases first, then compared
+   * against the metadata cache, so each note gets at most one
+   * `processFrontMatter` write — and none at all when it is already up to
+   * date, which is the common case on restart.
+   */
+  async syncAllCanvasProperties() {
+    if (!this.settings.enableFrontmatter)
       return;
-    if (!(fromNode == null ? void 0 : fromNode.filePath) && !(fromNode == null ? void 0 : fromNode.file))
-      return;
-    const fromFilePath = fromNode.filePath || fromNode.file;
-    const toFilePath = toNode.filePath || toNode.file;
-    const fromFile = this.app.vault.getFileByPath(fromFilePath);
-    const toFile = this.app.vault.getFileByPath(toFilePath);
-    if (fromFilePath === toFilePath)
-      return;
-    if (!fromFile || !toFile)
-      return;
-    const canvasName = e.canvas.view.file.basename;
-    let link = this.app.fileManager.generateMarkdownLink(toFile, fromFilePath).replace(/^!(\[\[.*\]\])$/, "$1");
-    await this.updateFrontmatter(fromFile, link, "add", canvasName);
+    const desiredByPath = /* @__PURE__ */ new Map();
+    const getDesired = (path) => {
+      let desired = desiredByPath.get(path);
+      if (!desired) {
+        desired = { canvasLinks: /* @__PURE__ */ new Set(), ensureKeys: /* @__PURE__ */ new Set(), linksByKey: /* @__PURE__ */ new Map() };
+        desiredByPath.set(path, desired);
+      }
+      return desired;
+    };
+    const canvasFiles = this.app.vault.getFiles().filter((file) => file.extension === "canvas");
+    await Promise.all(canvasFiles.map(async (canvasFile) => {
+      let canvasData;
+      try {
+        const content = await this.app.vault.read(canvasFile);
+        if (!content || content.trim() === "")
+          return;
+        canvasData = JSON.parse(content);
+      } catch (error) {
+        console.error("Enhanced Canvas: Failed to read canvas file", canvasFile.path, error);
+        return;
+      }
+      if (!canvasData)
+        return;
+      const nodes = Array.isArray(canvasData.nodes) ? canvasData.nodes : [];
+      const edges = Array.isArray(canvasData.edges) ? canvasData.edges : [];
+      const nodeById = /* @__PURE__ */ new Map();
+      for (const node of nodes) {
+        nodeById.set(node.id, node);
+      }
+      for (const node of nodes) {
+        if (!(node == null ? void 0 : node.file))
+          continue;
+        const desired = getDesired(node.file);
+        desired.canvasLinks.add(`[[${canvasFile.name}]]`);
+        desired.ensureKeys.add(canvasFile.basename);
+      }
+      for (const edgeData of edges) {
+        const fromNode = nodeById.get(edgeData.fromNode);
+        const toNode = nodeById.get(edgeData.toNode);
+        if (!(fromNode == null ? void 0 : fromNode.file) || !(toNode == null ? void 0 : toNode.file))
+          continue;
+        if (fromNode.file === toNode.file)
+          continue;
+        const toFile = this.app.vault.getFileByPath(toNode.file);
+        if (!toFile)
+          continue;
+        const link = this.app.fileManager.generateMarkdownLink(toFile, fromNode.file).replace(/^!(\[\[.*\]\])$/, "$1");
+        const desired = getDesired(fromNode.file);
+        let links = desired.linksByKey.get(canvasFile.basename);
+        if (!links) {
+          links = /* @__PURE__ */ new Set();
+          desired.linksByKey.set(canvasFile.basename, links);
+        }
+        links.add(link);
+      }
+    }));
+    await Promise.all(Array.from(desiredByPath.entries()).map(async ([path, desired]) => {
+      var _a;
+      const file = this.app.vault.getFileByPath(path);
+      if (!file || file.extension !== "md")
+        return;
+      const cached = (_a = this.app.metadataCache.getFileCache(file)) == null ? void 0 : _a.frontmatter;
+      if (cached) {
+        const cachedCanvas = frontmatterValueToArray(cached.canvas);
+        const cachedKeys = Object.keys(cached);
+        const canvasKeyIndex = cachedKeys.indexOf("canvas");
+        const upToDate = Array.from(desired.canvasLinks).every((link) => cachedCanvas.includes(link)) && // The key must exist *and* sit below the `canvas` property in the YAML.
+        Array.from(desired.ensureKeys).every((key) => !!cached[key] && canvasKeyIndex !== -1 && canvasKeyIndex < cachedKeys.indexOf(key)) && Array.from(desired.linksByKey.entries()).every(([key, links]) => {
+          const existing = frontmatterValueToArray(cached[key]);
+          return Array.from(links).every((link) => existing.includes(link));
+        });
+        if (upToDate)
+          return;
+      }
+      try {
+        await this.app.fileManager.processFrontMatter(file, (frontmatter) => {
+          if (!frontmatter)
+            return;
+          if (!frontmatter.canvas) {
+            frontmatter.canvas = [];
+          } else if (typeof frontmatter.canvas === "string") {
+            frontmatter.canvas = [frontmatter.canvas];
+          }
+          if (Array.isArray(frontmatter.canvas)) {
+            for (const link of desired.canvasLinks) {
+              if (!frontmatter.canvas.includes(link)) {
+                frontmatter.canvas.push(link);
+              }
+            }
+          }
+          for (const key of desired.ensureKeys) {
+            if (!frontmatter[key]) {
+              frontmatter[key] = [];
+            }
+          }
+          for (const [key, links] of desired.linksByKey) {
+            const existingValue = Reflect.get(frontmatter, key);
+            const wasString = typeof existingValue === "string" && existingValue.trim() !== "";
+            const merged = frontmatterValueToArray(existingValue);
+            for (const link of links) {
+              if (!merged.includes(link)) {
+                merged.push(link);
+              }
+            }
+            Reflect.set(frontmatter, key, merged.length === 1 && wasString ? merged[0] : merged);
+          }
+          ensureCanvasKeyOrder(frontmatter, desired.ensureKeys);
+        });
+      } catch (error) {
+        console.error("Enhanced Canvas: Failed to update properties for note", path, error);
+      }
+    }));
+  }
+  /** Applies or removes the body CSS class that gates the optional visual styles. */
+  toggleCSSClass(enabled) {
+    if (enabled) {
+      activeDocument.body.classList.add("enhanced-canvas-enabled");
+    } else {
+      activeDocument.body.classList.remove("enhanced-canvas-enabled");
+    }
   }
   /**
-   * Orchestrates a batch update for all connections within the provided canvas data
-   * to ensure every edge is validated and processed according to the plugin's
-   * current update logic.
+   * Patching Canvas internals needs a live Canvas leaf, which may not exist
+   * at load time. Runs `patch` now and again on every workspace change that
+   * could introduce one, until it reports success — then detaches the retry
+   * listeners so the patch can't run twice (see CLAUDE.md). The listeners
+   * are also registered for unload cleanup, so a patch that never succeeds
+   * leaks nothing.
    */
-  async processEdgesInCanvas(canvasData, canvasFile) {
-    if (!canvasData)
-      return;
-    const tempCanvas = {
-      view: {
-        file: canvasFile
-      },
-      getData: () => canvasData
+  registerLazyPatcher(patch) {
+    let patched = false;
+    const tryToPatch = () => {
+      if (patched || !patch())
+        return;
+      patched = true;
+      this.app.workspace.offref(leafEvent);
+      this.app.workspace.offref(layoutEvent);
     };
-    const nodeIdToNodeMap = /* @__PURE__ */ new Map();
-    if (canvasData.nodes && Array.isArray(canvasData.nodes)) {
-      for (const node of canvasData.nodes) {
-        nodeIdToNodeMap.set(node.id, node);
-      }
-    }
-    if (canvasData.edges && Array.isArray(canvasData.edges)) {
-      for (const edgeData of canvasData.edges) {
-        const fromNode = nodeIdToNodeMap.get(edgeData.fromNode);
-        const toNode = nodeIdToNodeMap.get(edgeData.toNode);
-        if (!fromNode || !toNode)
-          continue;
-        const e = {
-          from: { node: fromNode },
-          to: { node: toNode },
-          canvas: tempCanvas
-        };
-        await this.processEdgeUpdate(e);
-      }
-    }
+    const leafEvent = this.app.workspace.on("active-leaf-change", tryToPatch);
+    const layoutEvent = this.app.workspace.on("layout-change", tryToPatch);
+    this.registerEvent(leafEvent);
+    this.registerEvent(layoutEvent);
+    this.app.workspace.onLayoutReady(tryToPatch);
+    tryToPatch();
   }
   /**
    * Registers all core plugin features and performs an initial scan
@@ -934,50 +1512,33 @@ var EnhancedCanvas = class extends import_obsidian4.Plugin {
     this.checkReleaseNotes();
     this.exploder = new CanvasExploder(this);
     this.sendToCanvas = new SendToCanvas(this);
+    this.canvasTagImport = new CanvasTagImport(this);
+    this.addSettingTab(new EnhancedCanvasSettingTab(this.app, this));
+    this.toggleCSSClass(this.settings.enableCustomCSS);
     this.registerPluginCommands();
     this.registerCanvasAutoLink();
     this.registerFileManagerPatches();
     this.registerFocusCanvas();
     this.registerCanvasExploder();
+    this.registerCanvasTagImport();
     this.registerCanvasNodeAutoHeightPatcher();
+    this.registerCanvasDefaultNodeSize();
+    this.registerCanvasDragTempNodePatcher();
     try {
-      const canvasFiles = this.app.vault.getFiles().filter((file) => file.extension === "canvas");
-      await Promise.all(canvasFiles.map(async (canvasFile) => {
-        try {
-          const content = await this.app.vault.read(canvasFile);
-          if (!content || content.trim() === "")
-            return;
-          try {
-            const canvasData = JSON.parse(content);
-            if (!canvasData)
-              return;
-            if (canvasData.nodes && Array.isArray(canvasData.nodes)) {
-              for (const node of canvasData.nodes) {
-                if (!(node == null ? void 0 : node.file))
-                  continue;
-                this.addProperty(node, canvasFile.name, canvasFile.basename);
-              }
-            }
-            await this.processEdgesInCanvas(canvasData, canvasFile);
-          } catch (parseError) {
-            return;
-          }
-        } catch (fileError) {
-          return;
-        }
-      }));
+      await this.syncAllCanvasProperties();
     } catch (error) {
+      console.error("Enhanced Canvas: Error in metadata update loop", error);
       return;
     }
     this.registerEvent(
       this.app.workspace.on("active-leaf-change", (leaf) => {
         if (this.canvasStackInterval) {
-          clearInterval(this.canvasStackInterval);
+          window.clearInterval(this.canvasStackInterval);
           this.canvasStackInterval = null;
         }
         if (!leaf)
           return;
-        const isStacked = !!document.querySelector(".workspace-tabs.mod-stacked");
+        const isStacked = !!activeDocument.querySelector(".workspace-tabs.mod-stacked");
         if (!isStacked)
           return;
         const view = leaf.view;
@@ -986,14 +1547,17 @@ var EnhancedCanvas = class extends import_obsidian4.Plugin {
         if (typeof view.onResize === "function") {
           view.onResize();
         }
-        setTimeout(() => {
+        window.setTimeout(() => {
           if (typeof view.onResize === "function")
             view.onResize();
         }, 200);
         let lastLeft = view.containerEl.getBoundingClientRect().left;
-        this.canvasStackInterval = setInterval(() => {
+        this.canvasStackInterval = window.setInterval(() => {
           if (!view || !view.containerEl) {
-            clearInterval(this.canvasStackInterval);
+            if (this.canvasStackInterval !== null) {
+              window.clearInterval(this.canvasStackInterval);
+              this.canvasStackInterval = null;
+            }
             return;
           }
           const rect = view.containerEl.getBoundingClientRect();
@@ -1004,6 +1568,7 @@ var EnhancedCanvas = class extends import_obsidian4.Plugin {
             lastLeft = rect.left;
           }
         }, 200);
+        this.registerInterval(this.canvasStackInterval);
       })
     );
   }
@@ -1018,7 +1583,8 @@ var EnhancedCanvas = class extends import_obsidian4.Plugin {
             this.app,
             this,
             currentVersion,
-            isNewInstall
+            isNewInstall,
+            previousVersion
           ).open();
         }
       }
@@ -1039,20 +1605,19 @@ var EnhancedCanvas = class extends import_obsidian4.Plugin {
    * original operation proceeds.
    */
   registerFileManagerPatches() {
-    const plugin = this;
     const deleteFile = async (file) => {
       if (file.deleted === true)
         return;
-      const backLinks = plugin.app.metadataCache.getBacklinksForFile(file);
+      const backLinks = this.app.metadataCache.getBacklinksForFile(file);
       if (!backLinks || !backLinks.data)
         return;
-      const linkRegexBasename = new RegExp(`\\[\\[${file.basename}(\\|.*)?\\]\\]`);
-      const linkRegexFullName = new RegExp(`\\[\\[${file.name}(\\|.*)?\\]\\]`);
-      for (const [sourcePath, references] of backLinks.data.entries()) {
-        const sourceFile = plugin.app.vault.getFileByPath(sourcePath);
+      const linkRegexBasename = new RegExp(`\\[\\[${escapeRegExp(file.basename)}(\\|.*)?\\]\\]`);
+      const linkRegexFullName = new RegExp(`\\[\\[${escapeRegExp(file.name)}(\\|.*)?\\]\\]`);
+      for (const [sourcePath] of backLinks.data.entries()) {
+        const sourceFile = this.app.vault.getFileByPath(sourcePath);
         if (!sourceFile || sourceFile.extension !== "md")
           continue;
-        await plugin.app.fileManager.processFrontMatter(sourceFile, (frontmatter) => {
+        await this.app.fileManager.processFrontMatter(sourceFile, (frontmatter) => {
           if (!frontmatter)
             return;
           Object.keys(frontmatter).forEach((key) => {
@@ -1072,7 +1637,7 @@ var EnhancedCanvas = class extends import_obsidian4.Plugin {
         return;
       if (file.deleted === true)
         return;
-      const content = await plugin.app.vault.read(file);
+      const content = await this.app.vault.read(file);
       if (!content)
         return;
       const canvasData = JSON.parse(content);
@@ -1081,7 +1646,7 @@ var EnhancedCanvas = class extends import_obsidian4.Plugin {
       canvasData.nodes.forEach((node) => {
         if (node.type !== "file")
           return;
-        plugin.removeProperty(node, file.name, file.basename);
+        void this.removeProperty(node, file.name, file.basename);
       });
     };
     const renameCanvasFile = async (file, newPath) => {
@@ -1089,7 +1654,7 @@ var EnhancedCanvas = class extends import_obsidian4.Plugin {
         return;
       if (file.deleted === true)
         return;
-      const content = await plugin.app.vault.read(file);
+      const content = await this.app.vault.read(file);
       if (!content)
         return;
       const canvasData = JSON.parse(content);
@@ -1098,20 +1663,20 @@ var EnhancedCanvas = class extends import_obsidian4.Plugin {
       canvasData.nodes.forEach((node) => {
         if (node.type !== "file")
           return;
-        plugin.renameProperty(node, file.name, newPath);
+        this.renameProperty(node, file.name, newPath);
       });
     };
     const uninstaller = around(this.app.fileManager.constructor.prototype, {
       trashFile(old) {
         return function(file) {
-          deleteCanvasFile(file);
-          deleteFile(file);
+          void deleteCanvasFile(file);
+          void deleteFile(file);
           return old.call(this, file);
         };
       },
       renameFile(old) {
         return function(file, newPath) {
-          renameCanvasFile(file, newPath);
+          void renameCanvasFile(file, newPath);
           return old.call(this, file, newPath);
         };
       }
@@ -1129,21 +1694,21 @@ var EnhancedCanvas = class extends import_obsidian4.Plugin {
     this.addCommand({
       id: "optimize-edges",
       name: "Adjust edges with shortest path",
-      checkCallback: this.ifActiveViewIsCanvas((canvas, canvasData) => {
+      checkCallback: this.ifActiveViewIsCanvas((canvas) => {
         this.optimizeEdgesBetweenSelectedNodes(canvas);
       })
     });
     this.addCommand({
       id: "delete-edges",
       name: "Delete edges between selected nodes",
-      checkCallback: this.ifActiveViewIsCanvas((canvas, canvasData) => {
+      checkCallback: this.ifActiveViewIsCanvas((canvas) => {
         this.deleteEdges(canvas);
       })
     });
     this.addCommand({
       id: "add-link-and-optimize-edge",
       name: "Add edges according the links in notes",
-      checkCallback: this.ifActiveViewIsCanvas((canvas, canvasData) => {
+      checkCallback: this.ifActiveViewIsCanvas((canvas) => {
         this.createMissingEdgesFromLinks(canvas);
         this.optimizeEdgesBetweenSelectedNodes(canvas);
       })
@@ -1151,8 +1716,8 @@ var EnhancedCanvas = class extends import_obsidian4.Plugin {
     this.addCommand({
       id: "remove-canvas-property",
       name: "Remove the property of all nodes in current Canvas",
-      checkCallback: this.ifActiveViewIsCanvas((canvas, canvasData) => {
-        this.removeAllProperty(canvas, canvasData);
+      checkCallback: this.ifActiveViewIsCanvas((canvas) => {
+        void this.removeAllProperty(canvas, canvas.getData());
       })
     });
     this.addCommand({
@@ -1185,35 +1750,58 @@ var EnhancedCanvas = class extends import_obsidian4.Plugin {
    * file's metadata/properties panel (e.g., a backlink).
    */
   registerFocusCanvas() {
-    this.registerDomEvent(document, "click", (evt) => {
+    let clickedSourceFile = null;
+    const handleClick = (evt) => {
+      var _a, _b;
       const target = evt.target;
-      if (target.closest(".metadata-container")) {
+      if (target.closest(".metadata-container") || target.closest(".search-result-container")) {
         this.isMetadataClicked = true;
-        setTimeout(() => {
+        const activeView = this.app.workspace.getActiveViewOfType(import_obsidian6.FileView);
+        clickedSourceFile = (_b = (_a = activeView == null ? void 0 : activeView.file) == null ? void 0 : _a.path) != null ? _b : null;
+        window.setTimeout(() => {
           this.isMetadataClicked = false;
+          clickedSourceFile = null;
         }, 500);
       }
-    }, true);
+    };
+    const attachedDocs = /* @__PURE__ */ new WeakSet();
+    const attachTo = (doc) => {
+      if (attachedDocs.has(doc))
+        return;
+      attachedDocs.add(doc);
+      this.registerDomEvent(doc, "click", handleClick, true);
+    };
+    attachTo(document);
+    this.app.workspace.iterateAllLeaves((leaf) => {
+      const doc = leaf.view.containerEl.ownerDocument;
+      if (doc)
+        attachTo(doc);
+    });
+    this.registerEvent(
+      this.app.workspace.on("window-open", (_workspaceWindow, win) => {
+        attachTo(win.document);
+      })
+    );
     this.registerEvent(
       this.app.workspace.on("active-leaf-change", () => {
         Promise.resolve().then(async () => {
-          if (this.isMetadataClicked == false)
+          if (this.isMetadataClicked == false || !clickedSourceFile)
             return;
-          const activeLeaf = this.app.workspace.getActiveViewOfType(import_obsidian4.ItemView);
+          const activeLeaf = this.app.workspace.getActiveViewOfType(import_obsidian6.ItemView);
           if (!activeLeaf || activeLeaf.getViewType() !== "canvas")
             return;
-          const prevFile = this.app.workspace.getLastOpenFiles()[0];
+          const prevFile = clickedSourceFile;
           if (!prevFile)
             return;
-          const canvas = await activeLeaf.canvas;
+          const canvas = activeLeaf.canvas;
           if (!canvas)
             return;
-          for (const [key, value] of canvas.nodes) {
+          for (const value of canvas.nodes.values()) {
             if ((value == null ? void 0 : value.filePath) === prevFile) {
               canvas.select(value);
             }
           }
-          setTimeout(() => {
+          window.setTimeout(() => {
             canvas.zoomToSelection();
           }, 100);
         });
@@ -1227,9 +1815,10 @@ var EnhancedCanvas = class extends import_obsidian4.Plugin {
    * visual graph structure as nodes and edges are added, removed, or updated.
    */
   registerCanvasAutoLink() {
-    const plugin = this;
     const processNodeUpdate = async (e) => {
-      var _a, _b;
+      var _a, _b, _c, _d, _e, _f;
+      if (!this.settings.enableFrontmatter)
+        return;
       const fromNode = (_a = e == null ? void 0 : e.from) == null ? void 0 : _a.node;
       const toNode = (_b = e == null ? void 0 : e.to) == null ? void 0 : _b.node;
       if (!fromNode || !toNode)
@@ -1239,71 +1828,116 @@ var EnhancedCanvas = class extends import_obsidian4.Plugin {
       const fromFile = this.app.vault.getFileByPath(fromNode.filePath);
       if (!fromFile)
         return;
-      const canvasName = await e.canvas.view.file.basename;
+      const canvasFile = (_d = (_c = e.canvas) == null ? void 0 : _c.view) == null ? void 0 : _d.file;
+      if (!canvasFile)
+        return;
+      const canvasName = canvasFile.basename;
       const resolvedLinks = this.app.metadataCache.resolvedLinks[fromNode.filePath] || {};
       const fromNodeLinks = Object.keys(resolvedLinks);
-      const { edges, nodes } = await e.canvas.getData();
-      const sameFileNodes = nodes.filter((node) => node.file === fromNode.filePath);
-      const allRelevantEdges = edges.filter(
-        (edge) => sameFileNodes.some((node) => edge.fromNode === node.id)
-      );
-      const edgeToNodesFilePathSet = new Set(
-        allRelevantEdges.map((edge) => nodes.find((node) => node.id === edge.toNode)).filter((node) => node && node.file).map((node) => node.file)
-      );
-      const updatePromises = [];
-      const getFilePath = (path) => this.app.vault.getFileByPath(path);
-      fromNodeLinks.forEach((filePath) => {
-        if (!edgeToNodesFilePathSet.has(filePath)) {
-          if (filePath === e.canvas.view.file.path)
-            return;
-          const targetFile = getFilePath(filePath);
-          if (!targetFile)
-            return;
-          let link = this.app.fileManager.generateMarkdownLink(targetFile, filePath).replace(/^!(\[\[.*\]\])$/, "$1");
-          updatePromises.push(this.updateFrontmatter(fromFile, link, "remove", canvasName));
-        }
-      });
-      if (toNode == null ? void 0 : toNode.filePath) {
-        if (fromNode.filePath !== toNode.filePath) {
-          const targetFile = getFilePath(toNode.filePath);
-          if (targetFile) {
-            let link = this.app.fileManager.generateMarkdownLink(targetFile, toNode.filePath).replace(/^!(\[\[.*\]\])$/, "$1");
-            updatePromises.push(this.updateFrontmatter(fromFile, link, "add", canvasName));
-          }
-        }
+      const { edges, nodes } = e.canvas.getData();
+      const nodeById = /* @__PURE__ */ new Map();
+      const sameFileNodeIds = /* @__PURE__ */ new Set();
+      for (const node of nodes) {
+        nodeById.set(node.id, node);
+        if (node.file === fromNode.filePath)
+          sameFileNodeIds.add(node.id);
       }
-      await Promise.all(updatePromises);
+      if (!sameFileNodeIds.has(fromNode.id))
+        return;
+      const edgeToNodesFilePathSet = /* @__PURE__ */ new Set();
+      for (const edge of edges) {
+        if (!sameFileNodeIds.has(edge.fromNode))
+          continue;
+        const targetNode = nodeById.get(edge.toNode);
+        if ((targetNode == null ? void 0 : targetNode.type) === "file")
+          edgeToNodesFilePathSet.add(targetNode.file);
+      }
+      const getFilePath = (path) => this.app.vault.getFileByPath(path);
+      const toLink = (path, file) => this.app.fileManager.generateMarkdownLink(file, path).replace(/^!(\[\[.*\]\])$/, "$1");
+      const linksToRemove = [];
+      fromNodeLinks.forEach((filePath) => {
+        if (edgeToNodesFilePathSet.has(filePath))
+          return;
+        if (filePath === canvasFile.path)
+          return;
+        const targetFile = getFilePath(filePath);
+        if (!targetFile)
+          return;
+        linksToRemove.push(toLink(filePath, targetFile));
+      });
+      let linkToAdd = null;
+      if (toNode.filePath && fromNode.filePath !== toNode.filePath && edgeToNodesFilePathSet.has(toNode.filePath)) {
+        const targetFile = getFilePath(toNode.filePath);
+        if (targetFile)
+          linkToAdd = toLink(toNode.filePath, targetFile);
+      }
+      const cachedLinks = frontmatterValueToArray(
+        (_f = (_e = this.app.metadataCache.getFileCache(fromFile)) == null ? void 0 : _e.frontmatter) == null ? void 0 : _f[canvasName]
+      );
+      const cacheOutOfDate = linksToRemove.some((link) => cachedLinks.includes(link)) || linkToAdd !== null && !cachedLinks.includes(linkToAdd);
+      if (!cacheOutOfDate)
+        return;
+      await this.app.fileManager.processFrontMatter(fromFile, (fm) => {
+        const existingValue = Reflect.get(fm, canvasName);
+        const wasString = typeof existingValue === "string" && existingValue.trim() !== "";
+        const removeSet = new Set(linksToRemove);
+        const next = frontmatterValueToArray(existingValue).filter((link) => !removeSet.has(link));
+        if (linkToAdd && !next.includes(linkToAdd))
+          next.push(linkToAdd);
+        if (next.length > 0) {
+          Reflect.set(fm, canvasName, next.length === 1 && wasString ? next[0] : next);
+        } else {
+          Reflect.deleteProperty(fm, canvasName);
+        }
+        ensureCanvasKeyOrder(fm, [canvasName]);
+      });
     };
-    const updateTargetNode = (0, import_obsidian4.debounce)(async (e) => {
-      await processNodeUpdate(e);
+    const pendingEdgeUpdates = /* @__PURE__ */ new Set();
+    const flushEdgeUpdates = (0, import_obsidian6.debounce)(() => {
+      const pending = Array.from(pendingEdgeUpdates);
+      pendingEdgeUpdates.clear();
+      for (const edge of pending) {
+        void processNodeUpdate(edge);
+      }
     }, 500, true);
-    const updateTargetNodeImmediate = async (e) => {
-      await processNodeUpdate(e);
+    const edgeConnectivity = /* @__PURE__ */ new WeakMap();
+    const updateTargetNode = (e) => {
+      var _a, _b, _c, _d, _e, _f, _g, _h, _i, _j, _k, _l;
+      const connectivity = `${(_c = (_b = (_a = e.from) == null ? void 0 : _a.node) == null ? void 0 : _b.id) != null ? _c : ""}:${(_f = (_e = (_d = e.from) == null ? void 0 : _d.node) == null ? void 0 : _e.filePath) != null ? _f : ""}->${(_i = (_h = (_g = e.to) == null ? void 0 : _g.node) == null ? void 0 : _h.id) != null ? _i : ""}:${(_l = (_k = (_j = e.to) == null ? void 0 : _j.node) == null ? void 0 : _k.filePath) != null ? _l : ""}`;
+      const previous = edgeConnectivity.get(e);
+      if (previous === connectivity)
+        return;
+      edgeConnectivity.set(e, connectivity);
+      if (previous === void 0)
+        return;
+      pendingEdgeUpdates.add(e);
+      flushEdgeUpdates();
     };
     const updateOriginalNode = async (edge) => {
-      var _a, _b;
-      if (!((_a = edge.to.node) == null ? void 0 : _a.filePath) || !((_b = edge.from.node) == null ? void 0 : _b.filePath))
-        return;
-      const canvasName = edge.canvas.view.file.basename;
       const toNode = edge.to.node;
       const fromNode = edge.from.node;
-      const file = this.app.vault.getFileByPath(toNode.filePath);
+      const toFilePath = toNode == null ? void 0 : toNode.filePath;
+      const fromFilePath = fromNode == null ? void 0 : fromNode.filePath;
+      if (!toFilePath || !fromFilePath)
+        return;
+      const canvasName = edge.canvas.view.file.basename;
+      const file = this.app.vault.getFileByPath(toFilePath);
       if (!file)
         return;
-      let link = this.app.fileManager.generateMarkdownLink(file, toNode.filePath);
+      let link = this.app.fileManager.generateMarkdownLink(file, toFilePath);
       link = link.replace(/^!(\[\[.*\]\])$/, "$1");
-      if (fromNode == null ? void 0 : fromNode.filePath) {
-        const fromFile = this.app.vault.getFileByPath(fromNode.filePath);
-        if (!fromFile)
-          return;
-        const { edges, nodes } = await edge.canvas.getData();
-        const sameFileNodes = nodes.filter((node) => node.file === fromNode.filePath);
-        const stillHasConnection = edges.some(
-          (e) => sameFileNodes.some((node) => e.fromNode === node.id) && e.toNode === toNode.id && !(e.fromNode === fromNode.id && e.toNode === toNode.id)
-        );
-        if (!stillHasConnection) {
-          this.updateFrontmatter(fromFile, link, "remove", canvasName);
-        }
+      const fromFile = this.app.vault.getFileByPath(fromFilePath);
+      if (!fromFile)
+        return;
+      const { edges, nodes } = edge.canvas.getData();
+      const sameFileNodeIds = new Set(
+        nodes.filter((node) => node.file === fromFilePath).map((node) => node.id)
+      );
+      const stillHasConnection = edges.some(
+        (e) => sameFileNodeIds.has(e.fromNode) && e.toNode === toNode.id && e.fromNode !== fromNode.id
+      );
+      if (!stillHasConnection) {
+        void this.updateFrontmatter(fromFile, link, "remove", canvasName);
       }
     };
     const removeNodeUpdate = async (node) => {
@@ -1317,14 +1951,11 @@ var EnhancedCanvas = class extends import_obsidian4.Plugin {
       if (resolvedNode == null ? void 0 : resolvedNode.filePath) {
         const canvasData = await resolvedNode.canvas.getData();
         const otherNodes = canvasData.nodes.filter(
-          (n) => {
-            return n.file === resolvedNode.filePath;
-          }
+          (n) => n.file === resolvedNode.filePath
         );
         if (otherNodes.length === 0) {
-          let tmpNode = {};
-          tmpNode.file = resolvedNode.filePath;
-          this.removeProperty(tmpNode, canvasFile.name, canvasFile.basename);
+          const tmpNode = { file: resolvedNode.filePath };
+          void this.removeProperty(tmpNode, canvasFile.name, canvasFile.basename);
         }
       }
     };
@@ -1337,13 +1968,15 @@ var EnhancedCanvas = class extends import_obsidian4.Plugin {
       if (!canvasFile || !canvasFile.name)
         return;
       if (resolvedNode.filePath) {
-        let tmpNode = {};
-        tmpNode.file = resolvedNode.filePath;
-        this.addProperty(tmpNode, canvasFile.name, canvasFile.basename);
+        const tmpNode = { file: resolvedNode.filePath };
+        void this.addProperty(tmpNode, canvasFile.name, canvasFile.basename);
       }
     };
+    const patchedEdgeConstructors = /* @__PURE__ */ new WeakSet();
     const selfPatched = (edge) => {
-      this.patchedEdge = true;
+      if (patchedEdgeConstructors.has(edge.constructor))
+        return;
+      patchedEdgeConstructors.add(edge.constructor);
       const uninstaller = around(edge.constructor.prototype, {
         update: (next) => {
           return function(...args) {
@@ -1353,11 +1986,17 @@ var EnhancedCanvas = class extends import_obsidian4.Plugin {
           };
         }
       });
-      plugin.register(uninstaller);
+      this.register(uninstaller);
     };
+    let canvasPatched = false;
     const patchCanvas = () => {
       var _a;
-      const canvasView = (_a = plugin.app.workspace.getLeavesOfType("canvas")[0]) == null ? void 0 : _a.view;
+      if (canvasPatched)
+        return false;
+      const canvasView = (_a = this.app.workspace.getLeavesOfType("canvas").find((l) => {
+        var _a2;
+        return ((_a2 = l.view) == null ? void 0 : _a2.canvas) != null;
+      })) == null ? void 0 : _a.view;
       if (!(canvasView == null ? void 0 : canvasView.canvas))
         return false;
       const uninstaller = around(canvasView.canvas.constructor.prototype, {
@@ -1365,7 +2004,7 @@ var EnhancedCanvas = class extends import_obsidian4.Plugin {
           return function(node) {
             const result = old.call(this, node);
             if (this.isClearing !== true) {
-              removeNodeUpdate(node);
+              void removeNodeUpdate(node);
             }
             return result;
           };
@@ -1373,7 +2012,7 @@ var EnhancedCanvas = class extends import_obsidian4.Plugin {
         addNode(old) {
           return function(node) {
             const result = old.call(this, node);
-            addNodeUpdate(node);
+            void addNodeUpdate(node);
             return result;
           };
         },
@@ -1381,7 +2020,7 @@ var EnhancedCanvas = class extends import_obsidian4.Plugin {
           return function(edge) {
             const result = old.call(this, edge);
             if (this.isClearing !== true) {
-              updateOriginalNode(edge);
+              void updateOriginalNode(edge);
             }
             return result;
           };
@@ -1389,11 +2028,9 @@ var EnhancedCanvas = class extends import_obsidian4.Plugin {
         addEdge(old) {
           return function(edge) {
             const result = old.call(this, edge);
-            if (!plugin.patchedEdge) {
-              plugin.patchedEdge = true;
-              selfPatched(edge);
-            }
-            updateTargetNodeImmediate(edge);
+            selfPatched(edge);
+            pendingEdgeUpdates.add(edge);
+            flushEdgeUpdates();
             return result;
           };
         },
@@ -1401,54 +2038,52 @@ var EnhancedCanvas = class extends import_obsidian4.Plugin {
           return function() {
             this.isClearing = true;
             const result = old.call(this);
-            this.isClearing = false;
+            queueMicrotask(() => {
+              this.isClearing = false;
+            });
             return result;
           };
         }
       });
-      plugin.register(uninstaller);
+      this.register(uninstaller);
+      canvasPatched = true;
       return true;
     };
-    const tryToPatch = () => {
-      if (patchCanvas()) {
-        plugin.detachAutoLinkListeners();
-      }
-    };
-    plugin.autoLinkCheckReference = tryToPatch;
-    plugin.app.workspace.on("active-leaf-change", tryToPatch);
-    plugin.app.workspace.on("layout-change", tryToPatch);
-    tryToPatch();
+    this.registerLazyPatcher(patchCanvas);
   }
   registerCanvasExploder() {
     this.registerEvent(
       this.app.workspace.on("file-menu", (menu) => {
-        this.exploder.checkAndAddMenu(menu, "Split by Headings");
+        this.exploder.checkAndAddMenu(menu, "Split by headings");
       })
     );
     this.registerEvent(
       this.app.workspace.on("editor-menu", (menu) => {
-        this.exploder.checkAndAddMenu(menu, "Split by Headings");
+        this.exploder.checkAndAddMenu(menu, "Split by headings");
       })
     );
     this.patchCanvasNodeMenu();
+  }
+  registerCanvasTagImport() {
+    this.canvasTagImport.register();
   }
   /**
    * Patches Canvas to add context menu for text nodes (which don't trigger file-menu).
    */
   patchCanvasNodeMenu() {
     const plugin = this;
-    let patched = false;
-    const tryPatch = () => {
-      var _a, _b, _c, _d, _e, _f;
-      if (patched)
-        return;
-      const canvasView = (_b = (_a = this.app.workspace.getLeavesOfType("canvas")) == null ? void 0 : _a[0]) == null ? void 0 : _b.view;
-      const anyNode = (_f = (_e = (_d = (_c = canvasView == null ? void 0 : canvasView.canvas) == null ? void 0 : _c.nodes) == null ? void 0 : _d.values()) == null ? void 0 : _e.next()) == null ? void 0 : _f.value;
+    this.registerLazyPatcher(() => {
+      var _a, _b, _c, _d, _e;
+      const canvasView = (_a = this.app.workspace.getLeavesOfType("canvas").find((l) => {
+        var _a2, _b2, _c2;
+        return (_c2 = (_b2 = (_a2 = l.view) == null ? void 0 : _a2.canvas) == null ? void 0 : _b2.nodes) == null ? void 0 : _c2.size;
+      })) == null ? void 0 : _a.view;
+      const anyNode = (_e = (_d = (_c = (_b = canvasView == null ? void 0 : canvasView.canvas) == null ? void 0 : _b.nodes) == null ? void 0 : _c.values()) == null ? void 0 : _d.next()) == null ? void 0 : _e.value;
       if (!anyNode)
-        return;
+        return false;
       const basePrototype = Object.getPrototypeOf(Object.getPrototypeOf(anyNode));
       if (!(basePrototype == null ? void 0 : basePrototype.showMenu))
-        return;
+        return false;
       const uninstall = around(basePrototype, {
         showMenu: (next) => {
           return function(menu, ...args) {
@@ -1461,12 +2096,8 @@ var EnhancedCanvas = class extends import_obsidian4.Plugin {
         }
       });
       this.register(uninstall);
-      patched = true;
-      plugin.app.workspace.offref(leafEvent);
-    };
-    this.app.workspace.onLayoutReady(tryPatch);
-    const leafEvent = this.app.workspace.on("active-leaf-change", tryPatch);
-    this.registerEvent(leafEvent);
+      return true;
+    });
   }
   /**
    * Installs hooks into the native Canvas prototype to enable automatic height adjustment behavior,
@@ -1474,8 +2105,13 @@ var EnhancedCanvas = class extends import_obsidian4.Plugin {
    * on resize handles.
    */
   patchCanvasNodeAutoHeight() {
-    var _a, _b;
-    const canvasView = (_b = (_a = this.app.workspace.getLeavesOfType("canvas")) == null ? void 0 : _a.first()) == null ? void 0 : _b.view;
+    var _a;
+    if (this.autoHeightUninstaller)
+      return false;
+    const canvasView = (_a = this.app.workspace.getLeavesOfType("canvas").find((l) => {
+      var _a2, _b, _c;
+      return (_c = (_b = (_a2 = l.view) == null ? void 0 : _a2.canvas) == null ? void 0 : _b.nodes) == null ? void 0 : _c.size;
+    })) == null ? void 0 : _a.view;
     if (!canvasView)
       return false;
     const canvas = canvasView.canvas;
@@ -1510,13 +2146,11 @@ var EnhancedCanvas = class extends import_obsidian4.Plugin {
           if (direction === "bottom") {
             if (this._autoHeightTimer) {
               window.clearTimeout(this._autoHeightTimer);
-              this._autoHeightTimer = null;
-            } else {
-              this._autoHeightTimer = window.setTimeout(() => {
-                this.autoHeightEnabled = false;
-                this._autoHeightTimer = null;
-              }, 250);
             }
+            this._autoHeightTimer = window.setTimeout(() => {
+              this.autoHeightEnabled = false;
+              this._autoHeightTimer = null;
+            }, 300);
           } else if (direction === "right" || direction === "left") {
             if (this.autoHeightEnabled === true) {
               const handlePointerUp = () => {
@@ -1541,7 +2175,7 @@ var EnhancedCanvas = class extends import_obsidian4.Plugin {
         return function(...args) {
           const result = originalMethod.apply(this, args);
           if (this.autoHeightEnabled) {
-            setTimeout(() => {
+            window.setTimeout(() => {
               if (typeof this.onResizeDblclick === "function") {
                 const mockEvent = {
                   preventDefault: () => {
@@ -1559,44 +2193,81 @@ var EnhancedCanvas = class extends import_obsidian4.Plugin {
     }
     if (Object.keys(methodsToPatch).length === 0)
       return false;
-    this.uninstaller = around(baseNodePrototype, methodsToPatch);
-    this.register(this.uninstaller);
+    this.autoHeightUninstaller = around(baseNodePrototype, methodsToPatch);
+    this.register(this.autoHeightUninstaller);
     return true;
   }
   registerCanvasNodeAutoHeightPatcher() {
-    const tryToPatch = () => {
-      const success = this.patchCanvasNodeAutoHeight();
-      if (success) {
-        this.detachAutoHeightPatcherListeners();
-      }
+    this.registerLazyPatcher(() => this.patchCanvasNodeAutoHeight());
+  }
+  /**
+   * Writes the user's configured default sizes into a Canvas instance's config so that
+   * every native creation path (double-click, paste, programmatic createTextNode/createFileNode)
+   * picks them up. Touches in-memory state only.
+   */
+  applyDefaultNodeSizeToCanvas(canvas) {
+    if (!(canvas == null ? void 0 : canvas.config))
+      return;
+    canvas.config.defaultTextNodeDimensions = {
+      width: this.settings.defaultTextNodeWidth,
+      height: this.settings.defaultTextNodeHeight
     };
-    this.autoHeightCheckReference = tryToPatch;
-    this.app.workspace.on("active-leaf-change", tryToPatch);
-    this.app.workspace.on("layout-change", tryToPatch);
-    tryToPatch();
+    canvas.config.defaultFileNodeDimensions = {
+      width: this.settings.defaultFileNodeWidth,
+      height: this.settings.defaultFileNodeHeight
+    };
   }
-  detachAutoHeightPatcherListeners() {
-    if (this.autoHeightCheckReference) {
-      this.app.workspace.off("active-leaf-change", this.autoHeightCheckReference);
-      this.app.workspace.off("layout-change", this.autoHeightCheckReference);
-      this.autoHeightCheckReference = null;
+  applyDefaultNodeSizeToAllOpenCanvases() {
+    var _a;
+    for (const leaf of this.app.workspace.getLeavesOfType("canvas")) {
+      const canvas = (_a = leaf.view) == null ? void 0 : _a.canvas;
+      if (canvas)
+        this.applyDefaultNodeSizeToCanvas(canvas);
     }
   }
-  detachAutoLinkListeners() {
-    if (this.autoLinkCheckReference) {
-      this.app.workspace.off("active-leaf-change", this.autoLinkCheckReference);
-      this.app.workspace.off("layout-change", this.autoLinkCheckReference);
-      this.autoLinkCheckReference = null;
-    }
+  registerCanvasDefaultNodeSize() {
+    const apply = () => this.applyDefaultNodeSizeToAllOpenCanvases();
+    this.registerEvent(this.app.workspace.on("active-leaf-change", apply));
+    this.registerEvent(this.app.workspace.on("layout-change", apply));
+    this.app.workspace.onLayoutReady(apply);
+    apply();
+  }
+  /**
+   * Patches Canvas.prototype.dragTempNode so dragging a note in from the file explorer
+   * uses the user's configured file-node size instead of whatever Obsidian's drag handler
+   * computed upstream of canvas.config.
+   */
+  patchCanvasDragTempNode() {
+    var _a, _b, _c;
+    if (this.dragTempNodeUninstaller)
+      return false;
+    const canvasView = (_a = this.app.workspace.getLeavesOfType("canvas").find((l) => {
+      var _a2;
+      return ((_a2 = l.view) == null ? void 0 : _a2.canvas) != null;
+    })) == null ? void 0 : _a.view;
+    const canvas = canvasView == null ? void 0 : canvasView.canvas;
+    if (!((_c = (_b = canvas == null ? void 0 : canvas.constructor) == null ? void 0 : _b.prototype) == null ? void 0 : _c.dragTempNode))
+      return false;
+    const plugin = this;
+    const uninstall = around(canvas.constructor.prototype, {
+      dragTempNode(orig) {
+        return function(dragEvent, _nodeSize, onDropped) {
+          const overridden = {
+            width: plugin.settings.defaultFileNodeWidth,
+            height: plugin.settings.defaultFileNodeHeight
+          };
+          return orig.call(this, dragEvent, overridden, onDropped);
+        };
+      }
+    });
+    this.dragTempNodeUninstaller = uninstall;
+    this.register(uninstall);
+    return true;
+  }
+  registerCanvasDragTempNodePatcher() {
+    this.registerLazyPatcher(() => this.patchCanvasDragTempNode());
   }
   createEdge(node1, node2) {
-    const random = (e) => {
-      let t = [];
-      for (let n = 0; n < e; n++) {
-        t.push((16 * Math.random() | 0).toString(16));
-      }
-      return t.join("");
-    };
     const node1CenterX = node1.x + node1.width / 2;
     const node1CenterY = node1.y + node1.height / 2;
     const node2CenterX = node2.x + node2.width / 2;
@@ -1619,7 +2290,7 @@ var EnhancedCanvas = class extends import_obsidian4.Plugin {
       toSide = "bottom";
     }
     const edgeData = {
-      id: random(16),
+      id: randomId(16),
       fromSide,
       fromNode: node1.id,
       toSide,
@@ -1628,37 +2299,125 @@ var EnhancedCanvas = class extends import_obsidian4.Plugin {
     return edgeData;
   }
   /**
-   * Performs a comprehensive cleanup on all canvas files when the plugin is
-   * unloaded, ensuring any custom properties or data managed by this plugin
-   * are removed from the vault.
+   * Performs a comprehensive cleanup on all markdown notes when the plugin
+   * is unloaded, ensuring any custom properties or data managed by this
+   * plugin are removed from the vault.
    */
-  async onunload() {
-    this.detachAutoHeightPatcherListeners();
-    this.detachAutoLinkListeners();
+  onunload() {
+    if (this.canvasStackInterval !== null) {
+      window.clearInterval(this.canvasStackInterval);
+      this.canvasStackInterval = null;
+    }
+    activeDocument.body.classList.remove("enhanced-canvas-enabled");
     this.sendToCanvas.clearSelectedCanvas(false);
-    try {
-      const canvasFiles = this.app.vault.getFiles().filter((file) => file.extension === "canvas");
-      await Promise.all(canvasFiles.map(async (canvasFile) => {
-        try {
-          const content = await this.app.vault.read(canvasFile);
-          const canvasData = JSON.parse(content);
-          const tempCanvas = {
-            view: {
-              file: canvasFile
-            },
-            setData: () => {
-            },
-            requestSave: () => {
-            }
-          };
-          this.removeAllProperty(tempCanvas, canvasData);
-        } catch (error) {
+    void this.cleanupCanvasProperties();
+  }
+  /**
+   * Strips every plugin-managed property from every markdown note: the
+   * `canvas` property plus each per-canvas property (named after a canvas
+   * basename). Note-driven rather than canvas-driven so it also removes
+   * orphans left behind by deleted/renamed canvases or removed nodes, and
+   * it works regardless of `enableFrontmatter`. Returns the paths of notes
+   * whose frontmatter could not be updated.
+   */
+  async cleanupCanvasProperties() {
+    const canvasBasenames = new Set(
+      this.app.vault.getFiles().filter((file) => file.extension === "canvas").map((file) => file.basename)
+    );
+    const linkToBasename = (link) => {
+      const target = link.replace(/^\[\[(.*)\]\]$/, "$1").split("|")[0];
+      const base = target.substring(target.lastIndexOf("/") + 1);
+      return base.endsWith(".canvas") ? base.slice(0, -".canvas".length) : base;
+    };
+    const failedFiles = [];
+    await Promise.all(this.app.vault.getMarkdownFiles().map(async (file) => {
+      var _a;
+      const cached = (_a = this.app.metadataCache.getFileCache(file)) == null ? void 0 : _a.frontmatter;
+      if (!cached)
+        return;
+      if (!("canvas" in cached) && !Object.keys(cached).some((key) => canvasBasenames.has(key)))
+        return;
+      try {
+        await this.app.fileManager.processFrontMatter(file, (frontmatter) => {
+          if (!frontmatter)
+            return;
+          const canvasLinks = Array.isArray(frontmatter.canvas) ? frontmatter.canvas : typeof frontmatter.canvas === "string" ? [frontmatter.canvas] : [];
+          for (const link of canvasLinks) {
+            if (typeof link === "string")
+              delete frontmatter[linkToBasename(link)];
+          }
+          delete frontmatter.canvas;
+          for (const key of Object.keys(frontmatter)) {
+            if (canvasBasenames.has(key))
+              delete frontmatter[key];
+          }
+        });
+      } catch (error) {
+        console.error("Enhanced Canvas: Failed to clean properties from note", file.path, error);
+        failedFiles.push(file.path);
+      }
+    }));
+    return failedFiles;
+  }
+};
+var EnhancedCanvasSettingTab = class extends import_obsidian6.PluginSettingTab {
+  constructor(app, plugin) {
+    super(app, plugin);
+    this.plugin = plugin;
+  }
+  display() {
+    const { containerEl } = this;
+    containerEl.empty();
+    new import_obsidian6.Setting(containerEl).setName("Enable Frontmatter Synchronization").setDesc(
+      "When enabled, canvas nodes and edges are mapped to file metadata (properties). "
+    ).addToggle(
+      (toggle) => toggle.setValue(this.plugin.settings.enableFrontmatter).onChange(async (value) => {
+        if (!value) {
+          this.plugin.settings.enableFrontmatter = false;
+          await this.plugin.saveSettings();
+          const failedFiles = await this.plugin.cleanupCanvasProperties();
+          if (failedFiles.length > 0) {
+            new import_obsidian6.Notice(`Failed to clean up properties for ${failedFiles.length} notes. Check console.`);
+            this.plugin.settings.enableFrontmatter = true;
+            await this.plugin.saveSettings();
+            toggle.setValue(true);
+          }
           return;
         }
-      }));
-    } catch (error) {
-      return;
-    }
+        this.plugin.settings.enableFrontmatter = value;
+        await this.plugin.saveSettings();
+      })
+    );
+    new import_obsidian6.Setting(containerEl).setName("Enable Custom Visuals & CSS").setDesc(
+      "When enabled, hide the metadata panel (properties) inside Canvas Node (and embedded notes and iframe previews)."
+    ).addToggle(
+      (toggle) => toggle.setValue(this.plugin.settings.enableCustomCSS).onChange(async (value) => {
+        this.plugin.settings.enableCustomCSS = value;
+        await this.plugin.saveSettings();
+        this.plugin.toggleCSSClass(value);
+      })
+    );
+    const MIN_NODE_DIMENSION = 50;
+    const MAX_NODE_DIMENSION = 5e3;
+    new import_obsidian6.Setting(containerEl).setName("Default node size").setHeading();
+    const sizeRow = (name, desc, key) => {
+      new import_obsidian6.Setting(containerEl).setName(name).setDesc(desc).addText(
+        (text) => text.setValue(String(this.plugin.settings[key])).onChange(async (raw) => {
+          const n = Number.parseInt(raw, 10);
+          if (!Number.isFinite(n))
+            return;
+          if (n < MIN_NODE_DIMENSION || n > MAX_NODE_DIMENSION)
+            return;
+          this.plugin.settings[key] = n;
+          await this.plugin.saveSettings();
+          this.plugin.applyDefaultNodeSizeToAllOpenCanvases();
+        })
+      );
+    };
+    sizeRow("Text node width", "Initial width (px) for new text cards. 50\u20135000.", "defaultTextNodeWidth");
+    sizeRow("Text node height", "Initial height (px) for new text cards. 50\u20135000.", "defaultTextNodeHeight");
+    sizeRow("File node width", "Initial width (px) for new file nodes. 50\u20135000.", "defaultFileNodeWidth");
+    sizeRow("File node height", "Initial height (px) for new file nodes. 50\u20135000.", "defaultFileNodeHeight");
   }
 };
 

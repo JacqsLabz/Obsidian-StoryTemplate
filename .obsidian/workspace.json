@@ -29,8 +29,8 @@
               "state": {
                 "file": "Universe.canvas",
                 "viewState": {
-                  "x": 341.6937106918239,
-                  "y": -1071.937106918239,
+                  "x": 100.54608511294958,
+                  "y": -1261.3363048241574,
                   "zoom": -0.37151502835321637
                 }
               },
@@ -86,7 +86,10 @@
             "type": "leaf",
             "state": {
               "type": "bookmarks",
-              "state": {},
+              "state": {
+                "showSearch": false,
+                "searchQuery": ""
+              },
               "icon": "lucide-bookmark",
               "title": "Bookmarks"
             }
@@ -206,23 +209,28 @@
   "active": "95330a0513ccd302",
   "lastOpenFiles": [
     "Universe.canvas",
+    "05_Stories/10_Part1/Part1.canvas",
+    "05_Stories/10_Part1/The second story/The second story.canvas",
+    "05_Stories/10_Part1/First Story/First Story.canvas",
+    "README.md",
+    "Universe.md",
+    "05_Stories/10_Part1/First Story/z-Merged.bat",
+    "stignore 2.txt",
+    "stignore 1.txt",
+    "stignore.txt",
     "Universe.base",
     "05_Stories/10_Part1/The second story/The second story base.md",
     "05_Stories/10_Part1/The second story/The second story - LEFT OUT.base",
     "05_Stories/10_Part1/The second story/The second story.base",
     "05_Stories/10_Part1/The second story/The second story - LEFT OUT base.md",
-    "05_Stories/10_Part1/The second story/The second story.canvas",
     "05_Stories/10_Part1/First Story/First Story base.md",
     "05_Stories/10_Part1/First Story/First Story - LEFT OUT base.md",
     "05_Stories/10_Part1/First Story/First Story.base",
     "05_Stories/10_Part1/First Story/First Story - LEFT OUT.base",
-    "05_Stories/10_Part1/First Story/First Story.canvas",
-    "05_Stories/10_Part1/Part1.canvas",
     "00_Utility/Templates/Add Metadata.md",
     "00_Utility/Templates/NoteNext.md",
     "00_Utility/Templates/NotePrevious.md",
     "00_Utility/Templates/SplitHere.md",
-    "README.md",
     "00_Utility/Templates/comment-paragraph.md",
     "05_Stories/10_Part1/First Story/A scene not on the canvas.md",
     "05_Stories/10_Part1/First Story/Time passes.md",
@@ -238,17 +246,12 @@
     "20_Characters/John/John's would.md",
     "20_Characters/John/Fak MetaData.md",
     "20_Characters/John/Fak’s Wounds MetaData.md",
-    "20_Characters/Jessica/Jessica.md",
     "05_Stories/10_MiddleAges/Jase/Jase - LEFT OUT.base",
     "05_Stories/10_MiddleAges/Jase/Jase.canvas",
-    "05_Stories/10_MiddleAges/Jase/Jase.base",
     "05_Stories/10_MiddleAges/The Dark Angel/Dark Angel.canvas",
     "Sarila.canvas",
     "05_Stories/10_MiddleAges/Daxton/Daxton.canvas",
-    "05_Stories/10_MiddleAges/Daxton/Daxton.base",
     "05_Stories/10_MiddleAges/MiddleAges.canvas",
-    "05_Stories/10_MiddleAges/Sevton/Sevton/Sevton.canvas",
-    "05_Stories/10_MiddleAges/Jase/Darker Blood + Mark/~syncthing~First black mar - Untitled Snapshot (5_8_24,_7_05_PM).md.tmp",
-    "05_Stories/10_MiddleAges/Jase/Darker Blood + Mark/~syncthing~Decide later - Untitled Snapshot (5_30_24,_5_20_PM).md.tmp"
+    "05_Stories/10_MiddleAges/Sevton/Sevton/Sevton.canvas"
   ]
 }

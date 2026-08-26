@@ -15,11 +15,53 @@ If your plugin does not need CSS, delete this file.
 }
 
 /* Hide metadata container in embeds (reading view) */
-/* .markdown-embed .metadata-container, 
-.markdown-embed-content .metadata-container { 
+.enhanced-canvas-enabled .markdown-embed .metadata-container, 
+.enhanced-canvas-enabled .markdown-embed-content .metadata-container { 
     display: none !important; 
 }
 
-.mod-inside-iframe.is-live-preview .metadata-container {
+.enhanced-canvas-enabled .mod-inside-iframe.is-live-preview .metadata-container {
     display: none !important;
-} */
+}
+
+.advanced-tag-input-container {
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+    margin-bottom: 20px;
+}
+
+.advanced-tag-input-container .setting-item {
+    border-top: none;
+    padding: 0;
+}
+
+.advanced-tag-input-container .setting-item-control {
+    width: 100%;
+}
+
+.advanced-tag-input-container input {
+    width: 100%;
+}
+
+.advanced-tag-suggestions {
+    max-height: 200px;
+    overflow-y: auto;
+    border: 1px solid var(--background-modifier-border);
+    border-radius: 4px;
+    display: none;
+}
+
+.advanced-tag-suggestions.is-visible {
+    display: block;
+}
+
+.advanced-tag-suggestions .suggestion-item {
+    padding: 5px 10px;
+    cursor: pointer;
+}
+
+.advanced-tag-suggestions .suggestion-item:hover,
+.advanced-tag-suggestions .suggestion-item.is-selected {
+    background-color: var(--background-modifier-hover);
+}
