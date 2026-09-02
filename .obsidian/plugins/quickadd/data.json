@@ -5,7 +5,7 @@
       "name": "Update Canvas Colors",
       "type": "Macro",
       "command": true,
-      "runOnStartup": false,
+      "runOnStartup": true,
       "macro": {
         "name": "Update Canvas Colors",
         "id": "a84240ae-379e-408b-b690-973f8db831db",

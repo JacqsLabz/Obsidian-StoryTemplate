@@ -76,8 +76,7 @@
             },
             "mobile": {
               "components": [
-                "icon",
-                "label"
+                "icon"
               ]
             },
             "tablet": {
@@ -97,7 +96,7 @@
           "uuid": "6c63c2f7-78a5-449f-9a2b-2d2d3b3790de",
           "icon": "lucide-table-properties",
           "label": "Prop.",
-          "tooltip": "Insert scene properies",
+          "tooltip": "Insert/fix scene properies",
           "hasCommand": false,
           "inGallery": false,
           "link": "Templater: Insert /Templates/Add Metadata",
@@ -116,8 +115,7 @@
             },
             "mobile": {
               "components": [
-                "icon",
-                "label"
+                "icon"
               ]
             },
             "tablet": {
@@ -152,8 +150,7 @@
             },
             "mobile": {
               "components": [
-                "icon",
-                "label"
+                "icon"
               ]
             },
             "tablet": {
@@ -318,7 +315,12 @@
           }
         }
       ],
-      "mobileStyles": [],
+      "mobileStyles": [
+        "mnbrder",
+        "mgls",
+        "mwd",
+        "mbtwn"
+      ],
       "name": "draft",
       "position": {
         "desktop": {
@@ -337,7 +339,7 @@
           }
         }
       },
-      "updated": "2026-03-05T02:37:11.897Z"
+      "updated": "2026-09-02T10:38:07.166Z"
     },
     {
       "uuid": "afa8bbef-6429-418c-90c7-f96f7d217015",
