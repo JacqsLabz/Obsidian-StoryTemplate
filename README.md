@@ -25,7 +25,7 @@ As of this writing, the Canvas Colors (on the note toolbars) is designed to have
 
 ### Canvas delete 
 
-Using shift + backspace on the canvas removes the note too. Delete and backspace still just remove the card from the canvas (while keeping the note file), but I wanted a way to just make it stop existing all together directly from the canvas. 
+Using shift + backspace on the canvas removes the note file too. Delete and backspace still just remove the card from the canvas (while keeping the note file), but I wanted a way to just make it stop existing all together directly from the canvas. 
 
 ### Files of note
 - stignore.txt - If you use SyncThing, set it to use import this for it's ignore pattern by using the first line. In the txt file, it's commented out (to prevent a loop), but inside syncthing just put "#include stignore.txt" (without the quotes, duh) in the ignore pattern box. 
