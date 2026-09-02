@@ -3,6 +3,7 @@ filters:
     - canvas.isEmpty()
     - file.inFolder(this.file.folder) && file.path != this.file.path
     - '!file.ext.containsAny("base", "canvas")'
+    - '!file.fullname.containsAny("-Merged", "base")'
 properties:
   note.Order:
     displayName: Sort
@@ -12,6 +13,7 @@ views:
     order:
       - Order
       - file.name
+      - Summary
       - file.folder
     sort:
       - property: Order
@@ -22,5 +24,6 @@ views:
         direction: ASC
     columnSize:
       note.Order: 73
-      file.name: 321
-      file.folder: 505
+      file.name: 153
+      note.Summary: 390
+      file.folder: 275

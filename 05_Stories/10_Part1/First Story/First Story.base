@@ -3,7 +3,10 @@ filters:
     - file.inFolder(this.file.folder) && file.path != this.file.path
     - '!file.ext.containsAny("txt", "base", "canvas")'
     - '!file.name.containsAny("metadata", "untitled snapshot")'
-    - '!file.fullname.containsAny("Notes.md", "Base.md")'
+    - '!file.fullname.containsAny("Notes.md", "Base.md", "note.md", "-Merged")'
+properties:
+  note.Order:
+    displayName: Order
 views:
   - type: table
     name: Table
@@ -11,6 +14,7 @@ views:
       - Order
       - file.name
       - file.tags
+      - notetoolbar
       - summary
     sort:
       - property: Order
@@ -19,4 +23,4 @@ views:
         direction: ASC
     columnSize:
       note.Order: 50
-      file.name: 165
+      file.name: 227

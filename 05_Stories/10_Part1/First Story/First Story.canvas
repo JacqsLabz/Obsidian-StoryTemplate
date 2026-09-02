@@ -7,12 +7,14 @@
 		{"id":"4d3c99d0c651e7d0","type":"file","file":"05_Stories/10_Part1/First Story/Another scene name.md","x":1360,"y":-1644,"width":400,"height":400,"color":"#f11e1e"},
 		{"id":"dbc92e08bf7e71b1","type":"file","file":"05_Stories/10_Part1/First Story/Things happen.md","x":1760,"y":280,"width":400,"height":400,"color":"#fbe918"},
 		{"id":"bac5913ef063e2d0","type":"file","file":"05_Stories/10_Part1/First Story/How it all ends.md","x":2560,"y":280,"width":400,"height":400,"color":"#f11e1e"},
-		{"id":"aba65c8e355e6b95","type":"file","file":"05_Stories/10_Part1/First Story/Revising thoughts.md","x":-1280,"y":-800,"width":400,"height":400},
+		{"id":"aba65c8e355e6b95","type":"file","file":"05_Stories/10_Part1/First Story/Revising Notes.md","x":-1280,"y":-800,"width":400,"height":400},
 		{"id":"d51ced72ad50848b","type":"file","file":"05_Stories/10_Part1/First Story/First Story - LEFT OUT base.md","x":-1280,"y":-1644,"width":400,"height":400}
 	],
 	"edges":[
 		{"id":"2aae57a3b74abb8b","fromNode":"509b210794d3e402","fromSide":"right","toNode":"4d3c99d0c651e7d0","toSide":"left"},
 		{"id":"1bc2b22b3a5cd2bf","fromNode":"db652ac29a4f88c2","fromSide":"right","toNode":"dbc92e08bf7e71b1","toSide":"left"},
-		{"id":"37a9e61bbbe936bc","fromNode":"dbc92e08bf7e71b1","fromSide":"right","toNode":"bac5913ef063e2d0","toSide":"left"}
+		{"id":"37a9e61bbbe936bc","fromNode":"dbc92e08bf7e71b1","fromSide":"right","toNode":"bac5913ef063e2d0","toSide":"left"},
+		{"id":"2ee592e248363af5","fromNode":"509b210794d3e402","fromSide":"bottom","toNode":"aba65c8e355e6b95","toSide":"right"},
+		{"id":"38b9d3501d4be270","fromNode":"dbc92e08bf7e71b1","fromSide":"top","toNode":"aba65c8e355e6b95","toSide":"right"}
 	]
 }

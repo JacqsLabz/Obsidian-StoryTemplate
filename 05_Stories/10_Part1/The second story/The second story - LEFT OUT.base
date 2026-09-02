@@ -3,7 +3,7 @@ filters:
     - canvas.isEmpty()
     - file.inFolder(this.file.folder) && file.path != this.file.path
     - '!file.ext.containsAny("base", "canvas")'
-    - '!file.fullname.containsAny("base.md")'
+    - '!file.fullname.containsAny("-Merged", "base")'
 properties:
   note.Order:
     displayName: Sort

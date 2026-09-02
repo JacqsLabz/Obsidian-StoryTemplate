@@ -8,5 +8,6 @@ canvas:
 notetoolbar: draft
 First Story:
   - "[Another scene name](Another%20scene%20name.md)"
+  - "[Revising Notes](Revising%20Notes.md)"
 ---
 We meet Jessica

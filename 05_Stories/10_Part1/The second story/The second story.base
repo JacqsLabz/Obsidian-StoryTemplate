@@ -1,9 +1,9 @@
 filters:
   and:
     - file.inFolder(this.file.folder) && file.path != this.file.path
-    - '!file.ext.containsAny("base", "canvas", "txt")'
+    - '!file.ext.containsAny("txt", "base", "canvas")'
     - '!file.name.containsAny("metadata", "untitled snapshot")'
-    - '!file.fullname.containsAny("Notes.md", "Base.md", "note.md")'
+    - '!file.fullname.containsAny("Notes.md", "Base.md", "note.md", "-Merged")'
 properties:
   note.Order:
     displayName: Order
@@ -19,9 +19,7 @@ views:
     sort:
       - property: Order
         direction: ASC
-      - property: file.folder
-        direction: ASC
-      - property: file.ext
+      - property: file.name
         direction: ASC
     columnSize:
       note.Order: 50
